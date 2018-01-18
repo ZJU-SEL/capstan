@@ -1,0 +1,17 @@
+language: go
+sudo: required
+dist: trusty
+go: 
+   - 1.9.x
+
+before_install:
+    - sudo apt-get update -qq
+install: 
+    - make install.tools
+script:
+    - make boiler
+    - make lint
+    - make gofmt
+    - make build
+after_success:
+    - bash <(curl -s https://codecov.io/bash)

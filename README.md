@@ -1,14 +1,25 @@
 # Kubernetes capstan
 
+[![Build Status](https://travis-ci.org/ZJU-SEL/capstan.svg?branch=master)](https://travis-ci.org/ZJU-SEL/capstan)
+[![codecov](https://codecov.io/gh/ZJU-SEL/capstan/branch/master/graph/badge.svg)](https://codecov.io/gh/ZJU-SEL/capstan)
+
+## Introduction
+
 capstan is a benchmark which contains series of workloads and testing tools for Kubernetes. You can obtain the performance data of each workload and each component in the specific configuration of Kubernetes cluster offered by different cloud offering.
 
 ## What is the scope of this project?
 
-capstan aims to provide a series of workloads and testing tools for Kubernetes cluster, which contains two component:
+capstan aims to provide a series of workloads and testing tools for Kubernetes cluster:
 
-- capstan: manage cluster lifecycle, start propeller service, analysis and display the testing results.
+- Manage cluster lifecycle.
 
-- propeller: run every workload's testing cases, collect the testing data and the performance data of Kubernetes component and Kubernetes cluster.
+- Run every workload's testing cases.
+
+- Collect the testing results and the performance data of Kubernetes component and Kubernetes cluster.
+
+- Analysis and display the testing results.
+
+- Generate a testing report and performance report.
 
 ## What is not in scope for this project?
 
