@@ -1,4 +1,4 @@
-# Copyright 2018 The ZJU-SEL Authors.
+# Copyright (c) 2018 The ZJU-SEL Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,17 +13,19 @@
 # limitations under the License.
 
 GO ?= go
-PROJECT := github.com/ZJU-SEL/capstan
-BINDIR := /usr/local/bin
-ifeq ($(GOPATH),)
-export GOPATH := $(CURDIR)/_output
-unexport GOBIN
-endif
-GOBINDIR := $(word 1,$(subst :, ,$(GOPATH)))
-PATH := $(GOBINDIR)/bin:$(PATH)
-GOPKGDIR := $(GOPATH)/src/$(PROJECT)
-GOPKGBASEDIR := $(shell dirname "$(GOPKGDIR)")
+PWD := $(shell pwd)
+BASE_DIR := $(shell basename $(PWD))
+# Keep an existing GOPATH, make a private one if it is undefined
+GOPATH_DEFAULT := $(PWD)/.go
+export GOPATH ?= $(GOPATH_DEFAULT)
+PKG := git.openstack.org/openstack/stackube
+DEST := $(GOPATH)/src/$(PKG)
 
+GOFLAGS :=
+TAGS :=
+LDFLAGS :=
+
+OUTPUT := _output
 
 .PHONY: all
 all: build
@@ -37,42 +39,49 @@ help:
 	@echo " * 'build' - Build capstan."
 	@echo " * 'clean' - Clean artifacts."
 
-.PHONY: check-gopath
-check-gopath:
-ifeq ("$(wildcard $(GOPKGDIR))","")
-	mkdir -p "$(GOPKGBASEDIR)"
-	ln -s "$(CURDIR)" "$(GOPKGBASEDIR)/capstan"
-endif
-ifndef GOPATH
-	$(error GOPATH is not set)
-endif
+.PHONY: depend
+depend: work
 
 .PHONY: build
-build: check-gopath
-		$(GO) install \
-		$(PROJECT)/cmd/capstan
+build: depend
+	cd $(DEST)
+	$(GO) build $(GOFLAGS) -a -o $(OUTPUT)/capstan ./cmd/capstan
 
 .PHONY: clean
 clean:
-	find . -name \*~ -delete
-	find . -name \#\* -delete
+	rm -rf $(OUTPUT)
 
 .PHONY: install
-install: check-gopath
-	install -D -m 755 $(GOBINDIR)/bin/capstan $(BINDIR)/capstan
+install: depend
+	cd $(DEST)
+	install -D -m 755 $(OUTPUT)/capstan /usr/local/bin/capstan
 
 .PHONY: uninstall
 uninstall:
-	rm -f $(BINDIR)/capstan
+	rm -f /usr/local/bin/capstan
 
-.PHONY: fmt
-fmt: check-gopath
-	files=$$(cd $(GOPKGDIR) && find . -not \(  \( -wholename '*/vendor/*' \) -prune \) -name '*.go' | xargs gofmt -s -l | tee >(cat - >&2)); [ -z "$$files" ]
+.PHONY: test
+test: test-unit
+
+.PHONY: test-unit
+test-unit: depend
+test-unit: TAGS += unit
+test-unit: test-flags
+
+.PHONY: test-flags
+test-flags:
+	cd $(DEST) && go test $(GOFLAGS) -tags '$(TAGS)' $(go list ./... | grep -v vendor)
+
+.PHONY: gofmt
+gofmt:
+	hack/verify-gofmt.sh
 
 .PHONY: lint
 lint:
-	hack/verify-gofmt.sh
-	hack/verify-govet.sh
+	hack/verify-lint.sh
+
+.PHONY: boiler
+boiler:
 	hack/verify-boilerplate.sh
 
 .PHONY: install.tools
@@ -80,13 +89,32 @@ install.tools:
 	go get -u github.com/alecthomas/gometalinter
 	gometalinter --install
 
-.PHONY: \
-	help \
-	check-gopath \
-	build \
-	clean \
-	install \
-	uninstall \
-	lint \
-	fmt \
-	install.tools
+cover:
+	@echo "$@ not yet implemented"
+
+docs:
+	@echo "$@ not yet implemented"
+
+godoc:
+	@echo "$@ not yet implemented"
+
+# Set up the development environment
+.PHONY: env
+env:
+	@echo "PWD: $(PWD)"
+	@echo "BASE_DIR: $(BASE_DIR)"
+	@echo "GOPATH: $(GOPATH)"
+	@echo "DEST: $(DEST)"
+	@echo "PKG: $(PKG)"
+
+work: $(GOPATH) $(DEST)
+
+$(GOPATH):
+	mkdir -p $(GOPATH)
+
+$(DEST): $(GOPATH)
+	mkdir -p $(shell dirname $(DEST))
+	ln -s $(PWD) $(DEST)
+
+shell: work
+	cd $(DEST) && $(SHELL) -i
