@@ -55,8 +55,8 @@ func NewWorkload(wl workload.Workload) (*Workload, error) {
 // Run runs a iperf workload (to adhere to workload.Interface).
 func (w *Workload) Run(kubeClient kubernetes.Interface) error {
 	for i, testingCase := range w.TestingTool.GetTestingCaseSet() {
-		// runing a testing case.
-		glog.V(1).Infof("Runing the %dth testing case:%v", i, testingCase)
+		// running a testing case.
+		glog.V(1).Infof("Running the %dth testing case:%v", i, testingCase)
 		err := w.TestingTool.Run(kubeClient, testingCase)
 		if err != nil {
 			return fmt.Errorf("Failed to create the resouces belong to testing case %q :%v", testingCase, err)
