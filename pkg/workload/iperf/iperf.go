@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ZJU-SEL/capstan/pkg/testingtool"
-	"github.com/ZJU-SEL/capstan/pkg/testingtool/iperf"
 	"github.com/ZJU-SEL/capstan/pkg/workload"
 	"github.com/golang/glog"
 	"k8s.io/client-go/kubernetes"
@@ -29,69 +27,85 @@ import (
 
 // Workload represents the iperf workload.
 type Workload struct {
-	Name        string
-	Image       string
-	TestingTool testingtool.Interface
+	workload workload.Workload
+	Name     string
+	Image    string
 }
 
 // Ensure iperf Workload implements workload.Interface
 var _ workload.Interface = &Workload{}
 
 // NewWorkload creates a new iperf workload from the given workload definition.
-func NewWorkload(wl workload.Workload) (*Workload, error) {
-	// TODO(mozhuli): support one workload mapping many testing tools.
-	tt, err := iperf.NewTool(wl.TestingTool)
-	if err != nil {
-		return nil, err
-	}
-
+func NewWorkload(wl workload.Workload) *Workload {
 	return &Workload{
-		Name:        wl.Name,
-		Image:       wl.Image,
-		TestingTool: tt,
-	}, nil
+		workload: wl,
+		Name:     wl.Name,
+		Image:    wl.Image,
+	}
 }
 
 // Run runs a iperf workload (to adhere to workload.Interface).
 func (w *Workload) Run(kubeClient kubernetes.Interface) error {
-	for i, testingCase := range w.TestingTool.GetTestingCaseSet() {
+	// initialize a new testing tool for this iperf workload.
+	testingTool, err := w.TestingTool()
+	if err != nil {
+		return err
+	}
+
+	for i, testingCase := range testingTool.GetTestingCaseSet() {
 		// running a testing case.
-		glog.V(1).Infof("Running the %dth testing case:%v", i, testingCase)
-		err := w.TestingTool.Run(kubeClient, testingCase)
+		glog.V(1).Infof("Running the %dth testing case %q of %v", i, testingCase, w.GetName())
+		err := testingTool.Run(kubeClient, testingCase.Name)
 		if err != nil {
-			return fmt.Errorf("Failed to create the resouces belong to testing case %q :%v", testingCase, err)
+			return fmt.Errorf("Failed to create the resouces belong to testing case %q of %v:%v", testingCase.Name, w.GetName(), err)
 		}
 
 		// monitor the process of the testing case.
 		testingErr := make(chan error)
-		go w.TestingTool.Monitor(kubeClient, testingErr)
+
+		go testingTool.Monitor(kubeClient, testingErr)
 
 		err = <-testingErr
 		if err != nil {
-			return fmt.Errorf("Failed to test the case %q :%v", testingCase, err)
+			return fmt.Errorf("Failed to test the case %q :%v", testingCase.Name, err)
 		}
 
 		// get the testing results of the testing case.
-		err = w.TestingTool.GetTestingResults(kubeClient)
+		err = testingTool.GetTestingResults(kubeClient)
 		if err != nil {
-			return fmt.Errorf("Failed to gets the testing results of the testing case %q :%v", testingCase, err)
+			return fmt.Errorf("Failed to gets the testing results of the testing case %q :%v", testingCase.Name, err)
 		}
 
 		// clean up the resouces created by the testing case.
-		err = w.TestingTool.Cleanup(kubeClient)
+		err = testingTool.Cleanup(kubeClient)
 		if err != nil {
-			return fmt.Errorf("Failed to cleanup the resouces created by the testing case %q :%v", testingCase, err)
+			return fmt.Errorf("Failed to cleanup the resouces created by the testing case %q :%v", testingCase.Name, err)
 		}
 
 		// sleep some seconds between testing cases.
-		time.Sleep(w.TestingTool.GetSteps())
+		time.Sleep(testingTool.GetSteps())
 	}
 	return nil
 }
 
-// GetTestingTool returns the testing tool interface for this iperf workload (to adhere to workload.Interface).
-func (w *Workload) GetTestingTool() testingtool.Interface {
-	return w.TestingTool
+// TestingTool initializes a new testing tool for this iperf workload (to adhere to workload.Interface).
+func (w *Workload) TestingTool() (workload.Tool, error) {
+	// TODO(mozhuli): support one workload mapping many testing tools.
+	if w.workload.TestingTool.Name != toolName {
+		return nil, fmt.Errorf("Wrong parameter(%q), the testing tool name must be %q", w.workload.TestingTool.Name, toolName)
+	}
+
+	if err := workload.TestingCaseSetHasDefined(w.workload.TestingTool.TestingCaseSet, TestingCaseSet); err != nil {
+		return nil, err
+	}
+
+	return &TestingTool{
+		Workload:       w,
+		Name:           toolName,
+		Image:          w.workload.TestingTool.Image,
+		Steps:          time.Duration(w.workload.TestingTool.Steps) * time.Second,
+		TestingCaseSet: w.workload.TestingTool.TestingCaseSet,
+	}, nil
 }
 
 // GetName returns the name of this iperf workload (to adhere to workload.Interface).
@@ -101,5 +115,5 @@ func (w *Workload) GetName() string {
 
 // GetImage returns the image name of this iperf workload (to adhere to workload.Interface).
 func (w *Workload) GetImage() string {
-	return w.Name
+	return w.Image
 }
