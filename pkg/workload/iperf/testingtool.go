@@ -14,22 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package wrk
+package iperf
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
-	"github.com/ZJU-SEL/capstan/pkg/testingtool"
+	"github.com/ZJU-SEL/capstan/pkg/workload"
 	"k8s.io/client-go/kubernetes"
 )
 
 const (
-	toolName = "wrk"
+	toolName = "iperf"
 )
 
-// TestingCaseSet is the list of wrk defined testing case.
+// TestingCaseSet is the list of iperf defined testing case.
 var TestingCaseSet = []string{
 	"benchmarkPodIPSameNode",
 	"benchmarkVIPSameNode",
@@ -37,68 +36,56 @@ var TestingCaseSet = []string{
 	"benchmarkVIPDiffNode",
 }
 
-// TestingTool represents the wrk testing tool.
+// TestingTool represents the iperf testing tool.
 type TestingTool struct {
+	Workload       *Workload
 	Name           string
 	Image          string
 	Steps          time.Duration
-	TestingCaseSet []string
+	TestingCaseSet []workload.TestingCase
 }
 
-// Ensure wrk testing tool implements testingtool.Interface
-var _ testingtool.Interface = &TestingTool{}
+// Ensure iperf testing tool implements workload.Tool interface.
+var _ workload.Tool = &TestingTool{}
 
-// NewTool creates a new wrk testing tool from the given testing tool definition.
-func NewTool(tool testingtool.TestingTool) (*TestingTool, error) {
-	if tool.Name != toolName {
-		return nil, fmt.Errorf("Wrong parameter, the testing tool name must be %q", toolName)
-	}
-	return &TestingTool{
-		Name:           toolName,
-		Image:          tool.Image,
-		Steps:          time.Duration(tool.Steps) * time.Second,
-		TestingCaseSet: strings.Split(tool.TestingCaseSet, ","),
-	}, nil
-}
-
-// Run runs the defined testing case set for wrk testing tool (to adhere to testingtool.Interface).
+// Run runs the defined testing case set for iperf testing tool (to adhere to workload.Tool interface).
 func (t *TestingTool) Run(kubeClient kubernetes.Interface, testingCase string) error {
 	return fmt.Errorf("Not implemented")
 }
 
-//GetTestingResults gets the testing results of wrk testing case (to adhere to testingtool.Interface).
+//GetTestingResults gets the testing results of iperf testing case (to adhere to workload.Tool interface).
 func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 	return fmt.Errorf("Not implemented")
 }
 
-// Cleanup cleans up all resources created by a testing case for wrk testing tool (to adhere to testingtool.Interface).
+// Cleanup cleans up all resources created by a testing case for iperf testing tool (to adhere to workload.Tool interface).
 func (t *TestingTool) Cleanup(kubeClient kubernetes.Interface) error {
 	return fmt.Errorf("Not implemented")
 }
 
 // Monitor continually checks for problems in the resources created by a
 // testing case (either because it won't schedule, too many failed executions, etc)
-// and sends the errors through the provided channel (to adhere to testingtool.Interface).
+// and sends the errors through the provided channel (to adhere to workload.Tool interface).
 func (t *TestingTool) Monitor(kubeClient kubernetes.Interface, testingErr chan error) {
 	testingErr <- fmt.Errorf("Not implemented")
 }
 
-// GetName returns the name of wrk testing tool (to adhere to testingtool.Interface).
+// GetName returns the name of iperf testing tool (to adhere to workload.Tool interface).
 func (t *TestingTool) GetName() string {
 	return t.Name
 }
 
-// GetImage returns the image name of wrk testing tool (to adhere to testingtool.Interface).
+// GetImage returns the image name of iperf testing tool (to adhere to workload.Tool interface).
 func (t *TestingTool) GetImage() string {
 	return t.Image
 }
 
-// GetSteps returns the steps between each testing case (to adhere to testingtool.Interface).
+// GetSteps returns the steps between each testing case (to adhere to workload.Tool interface).
 func (t *TestingTool) GetSteps() time.Duration {
 	return t.Steps
 }
 
-// GetTestingCaseSet returns the testing case set which the wrk testing tool will run (to adhere to testingtool.Interface).
-func (t *TestingTool) GetTestingCaseSet() []string {
+// GetTestingCaseSet returns the testing case set which the iperf testing tool will run (to adhere to workload.Tool interface).
+func (t *TestingTool) GetTestingCaseSet() []workload.TestingCase {
 	return t.TestingCaseSet
 }

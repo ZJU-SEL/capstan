@@ -53,9 +53,9 @@ func loadWorkload(wl workload.Workload) (workload.Interface, error) {
 	glog.V(1).Infof("Load a testing workload with config:%v", wl)
 	switch wl.Name {
 	case "nginx":
-		return nginx.NewWorkload(wl)
+		return nginx.NewWorkload(wl), nil
 	case "iperf":
-		return iperf.NewWorkload(wl)
+		return iperf.NewWorkload(wl), nil
 	default:
 		return nil, fmt.Errorf("Unknown workload %v", wl.Name)
 	}
