@@ -23,6 +23,7 @@ import (
 	"github.com/ZJU-SEL/capstan/pkg/capstan"
 	"github.com/ZJU-SEL/capstan/pkg/util"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 	"k8s.io/client-go/kubernetes"
 )
@@ -39,11 +40,11 @@ func initK8sClient() (*kubernetes.Clientset, error) {
 	// Create kubernetes client config. Use kubeconfig if given, otherwise assume in-cluster.
 	config, err := util.NewClusterConfig(*kubeconfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build kubeconfig: %v", err)
+		return nil, errors.Wrap(err, "Failed to build kubeconfig")
 	}
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create kubernetes clientset: %v", err)
+		return nil, errors.Wrap(err, "Failed to create kubernetes clientset")
 	}
 
 	return kubeClient, nil

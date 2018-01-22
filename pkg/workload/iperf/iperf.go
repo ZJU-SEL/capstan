@@ -17,11 +17,11 @@ limitations under the License.
 package iperf
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/ZJU-SEL/capstan/pkg/workload"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -57,7 +57,7 @@ func (w *Workload) Run(kubeClient kubernetes.Interface) error {
 		glog.V(1).Infof("Running the %dth testing case %q of %v", i, testingCase, w.GetName())
 		err := testingTool.Run(kubeClient, testingCase.Name)
 		if err != nil {
-			return fmt.Errorf("Failed to create the resouces belong to testing case %q of %v:%v", testingCase.Name, w.GetName(), err)
+			return errors.Wrapf(err, "Failed to create the resouces belong to testing case %q of %v", testingCase.Name, w.GetName())
 		}
 
 		// monitor the process of the testing case.
@@ -67,19 +67,19 @@ func (w *Workload) Run(kubeClient kubernetes.Interface) error {
 
 		err = <-testingErr
 		if err != nil {
-			return fmt.Errorf("Failed to test the case %q :%v", testingCase.Name, err)
+			return errors.Wrapf(err, "Failed to test the case %s", testingCase.Name)
 		}
 
 		// get the testing results of the testing case.
 		err = testingTool.GetTestingResults(kubeClient)
 		if err != nil {
-			return fmt.Errorf("Failed to gets the testing results of the testing case %q :%v", testingCase.Name, err)
+			return errors.Wrapf(err, "Failed to gets the testing results of the testing case %s", testingCase.Name)
 		}
 
 		// clean up the resouces created by the testing case.
 		err = testingTool.Cleanup(kubeClient)
 		if err != nil {
-			return fmt.Errorf("Failed to cleanup the resouces created by the testing case %q :%v", testingCase.Name, err)
+			return errors.Wrapf(err, "Failed to cleanup the resouces created by the testing case %s", testingCase.Name)
 		}
 
 		// sleep some seconds between testing cases.
@@ -92,7 +92,7 @@ func (w *Workload) Run(kubeClient kubernetes.Interface) error {
 func (w *Workload) TestingTool() (workload.Tool, error) {
 	// TODO(mozhuli): support one workload mapping many testing tools.
 	if w.workload.TestingTool.Name != toolName {
-		return nil, fmt.Errorf("Wrong parameter(%q), the testing tool name must be %q", w.workload.TestingTool.Name, toolName)
+		return nil, errors.Errorf("Wrong parameter(%q), the testing tool name must be %q", w.workload.TestingTool.Name, toolName)
 	}
 
 	if err := workload.TestingCaseSetHasDefined(w.workload.TestingTool.TestingCaseSet, TestingCaseSet); err != nil {

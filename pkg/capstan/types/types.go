@@ -22,6 +22,7 @@ import (
 
 	"github.com/ZJU-SEL/capstan/pkg/data/cadvisor"
 	"github.com/ZJU-SEL/capstan/pkg/workload"
+	"github.com/pkg/errors"
 )
 
 // Config is the internal representation of capstan configuration.
@@ -38,12 +39,12 @@ type Config struct {
 func ReadConfig(filepath string) (Config, error) {
 	data, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		return Config{}, err
+		return Config{}, errors.WithStack(err)
 	}
 	config := Config{}
 	err = json.Unmarshal(data, &config)
 	if err != nil {
-		return Config{}, err
+		return Config{}, errors.WithStack(err)
 	}
 	return config, nil
 }
