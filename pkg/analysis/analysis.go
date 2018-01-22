@@ -17,10 +17,10 @@ limitations under the License.
 package analysis
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 )
 
 // Start starts analysis the testing results.
 func Start(dataPath string) error {
-	return fmt.Errorf("Not Implemented")
+	return errors.Errorf("Not Implemented")
 }

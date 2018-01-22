@@ -17,10 +17,10 @@ limitations under the License.
 package iperf
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/ZJU-SEL/capstan/pkg/workload"
+	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -50,24 +50,24 @@ var _ workload.Tool = &TestingTool{}
 
 // Run runs the defined testing case set for iperf testing tool (to adhere to workload.Tool interface).
 func (t *TestingTool) Run(kubeClient kubernetes.Interface, testingCase string) error {
-	return fmt.Errorf("Not implemented")
+	return errors.Errorf("Not implemented")
 }
 
 //GetTestingResults gets the testing results of iperf testing case (to adhere to workload.Tool interface).
 func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
-	return fmt.Errorf("Not implemented")
+	return errors.Errorf("Not implemented")
 }
 
 // Cleanup cleans up all resources created by a testing case for iperf testing tool (to adhere to workload.Tool interface).
 func (t *TestingTool) Cleanup(kubeClient kubernetes.Interface) error {
-	return fmt.Errorf("Not implemented")
+	return errors.Errorf("Not implemented")
 }
 
 // Monitor continually checks for problems in the resources created by a
 // testing case (either because it won't schedule, too many failed executions, etc)
 // and sends the errors through the provided channel (to adhere to workload.Tool interface).
 func (t *TestingTool) Monitor(kubeClient kubernetes.Interface, testingErr chan error) {
-	testingErr <- fmt.Errorf("Not implemented")
+	testingErr <- errors.Errorf("Not implemented")
 }
 
 // GetName returns the name of iperf testing tool (to adhere to workload.Tool interface).

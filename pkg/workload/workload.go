@@ -17,9 +17,9 @@ limitations under the License.
 package workload
 
 import (
-	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -101,7 +101,7 @@ func TestingCaseSetHasDefined(testingCaseSet []TestingCase, defs []string) error
 			}
 		}
 		if !found {
-			return fmt.Errorf("Testing case %v has not defined, the testingCaseSet must in %v", testingCase.Name, defs)
+			return errors.Errorf("Testing case %v has not defined, the testingCaseSet must in %v", testingCase.Name, defs)
 		}
 	}
 	return nil

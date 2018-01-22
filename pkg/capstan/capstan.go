@@ -17,7 +17,6 @@ limitations under the License.
 package capstan
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/ZJU-SEL/capstan/pkg/dashboard"
 	"github.com/ZJU-SEL/capstan/pkg/data/cadvisor"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -44,18 +44,18 @@ func Run(kubeClient kubernetes.Interface, capstanConfig string) error {
 	// Read capstan config.
 	cfg, err := types.ReadConfig(capstanConfig)
 	if err != nil {
-		return fmt.Errorf("Failed read capstan config: %v", err)
+		return errors.Wrap(err, "Failed read capstan config")
 	}
 	glog.V(1).Infof("Initializing capstan with config %v", cfg)
 
 	if len(cfg.Workloads) == 0 {
-		return fmt.Errorf("Testing workload not set, exit")
+		return errors.New("Testing workload not set, exit")
 	}
 
 	// 1. Load all workloads
 	workloads, err := loader.LoadAllWorkloads(cfg.Workloads)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed load workloads")
 	}
 
 	// 2. Start obtaining cadvisor data

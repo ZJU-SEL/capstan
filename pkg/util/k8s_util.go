@@ -17,6 +17,7 @@ limitations under the License.
 package util
 
 import (
+	"github.com/pkg/errors"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -37,7 +38,7 @@ func NewClusterConfig(kubeConfig string) (*rest.Config, error) {
 		cfg, err = rest.InClusterConfig()
 	}
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	// Setup default QPS and burst.

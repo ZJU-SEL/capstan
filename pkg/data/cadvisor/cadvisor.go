@@ -17,7 +17,7 @@ limitations under the License.
 package cadvisor
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 )
 
 // Config is the internal representation of cadvisor configuration.
@@ -27,5 +27,5 @@ type Config struct {
 
 // Start is the entry to start obtaining cadvisor data.
 func Start(cfg Config) error {
-	return fmt.Errorf("Not Implemented")
+	return errors.Errorf("Not Implemented")
 }

@@ -17,13 +17,11 @@ limitations under the License.
 package loader
 
 import (
-	"fmt"
-
-	"github.com/golang/glog"
-
 	"github.com/ZJU-SEL/capstan/pkg/workload"
 	"github.com/ZJU-SEL/capstan/pkg/workload/iperf"
 	"github.com/ZJU-SEL/capstan/pkg/workload/nginx"
+	"github.com/golang/glog"
+	"github.com/pkg/errors"
 )
 
 // LoadAllWorkloads loads all workloads by parsing workloads section config,
@@ -35,15 +33,14 @@ func LoadAllWorkloads(workloads []workload.Workload) (ret []workload.Interface, 
 			if wl.Name == wlDef {
 				w, err := loadWorkload(wl)
 				if err != nil {
-					glog.Errorf("Failed load the testing workload %q :%v", wl.Name, err)
-					return ret, err
+					return ret, errors.Wrap(err, "Failed load the testing workload")
 				}
 				ret = append(ret, w)
 				find = true
 			}
 		}
 		if !find {
-			return ret, fmt.Errorf("The testing workload %q has not defined in capstan", wl.Name)
+			return ret, errors.Errorf("The testing workload %q has not defined in capstan", wl.Name)
 		}
 	}
 	return ret, nil
@@ -57,6 +54,6 @@ func loadWorkload(wl workload.Workload) (workload.Interface, error) {
 	case "iperf":
 		return iperf.NewWorkload(wl), nil
 	default:
-		return nil, fmt.Errorf("Unknown workload %v", wl.Name)
+		return nil, errors.Errorf("unknown workload %v", wl.Name)
 	}
 }
