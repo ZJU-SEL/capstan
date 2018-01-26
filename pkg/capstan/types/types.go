@@ -25,6 +25,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	// ResultsDir is the directory of testing results.
+	ResultsDir = "/tmp/capstan"
+)
+
 // Config is the internal representation of capstan configuration.
 type Config struct {
 	ResultsDir string `json:"ResultsDir"`
@@ -45,6 +50,9 @@ func ReadConfig(filepath string) (Config, error) {
 	err = json.Unmarshal(data, &config)
 	if err != nil {
 		return Config{}, errors.WithStack(err)
+	}
+	if config.ResultsDir != "" {
+		ResultsDir = config.ResultsDir
 	}
 	return config, nil
 }

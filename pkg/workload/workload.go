@@ -23,6 +23,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+const (
+	// DefaultNamespace is the default namespace for capstan.
+	DefaultNamespace = "capstan"
+)
+
 // Interface should be implemented by a specific workload.
 type Interface interface {
 	// Run runs a testing workload.
@@ -38,15 +43,11 @@ type Interface interface {
 // Tool should be implemented by a testing tool.
 type Tool interface {
 	// Run runs the defined testing case set.
-	Run(kubeClient kubernetes.Interface, testingCase string) error
+	Run(kubeClient kubernetes.Interface, testingCase TestingCase) error
 	// GetTestingResults gets the testing results of a testing case.
 	GetTestingResults(kubeClient kubernetes.Interface) error
 	// Cleanup cleans up all resources created by a testing case.
 	Cleanup(kubeClient kubernetes.Interface) error
-	// Monitor continually checks for problems in the resources created by a
-	// testing case (either because it won't schedule, too many failed executions, etc)
-	// and sends the errors through the provided channel.
-	Monitor(kubeClient kubernetes.Interface, testingErr chan error)
 	// GetName returns the name of this testing tool.
 	GetName() string
 	// GetImage returns the image name of this testing tool.
