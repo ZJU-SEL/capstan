@@ -18,7 +18,7 @@ BASE_DIR := $(shell basename $(PWD))
 # Keep an existing GOPATH, make a private one if it is undefined
 GOPATH_DEFAULT := $(PWD)/.go
 export GOPATH ?= $(GOPATH_DEFAULT)
-PKG := git.openstack.org/openstack/stackube
+PKG := github/ZJU-SEL/capstan
 DEST := $(GOPATH)/src/$(PKG)
 
 GOFLAGS :=

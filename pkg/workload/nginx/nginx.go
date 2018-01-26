@@ -52,37 +52,30 @@ func (w *Workload) Run(kubeClient kubernetes.Interface) error {
 		return err
 	}
 
-	for i, testingCase := range testingTool.GetTestingCaseSet() {
+	for _, testingCase := range testingTool.GetTestingCaseSet() {
 		// running a testing case.
-		glog.V(1).Infof("Running the %dth testing case %q of %v", i, testingCase, w.GetName())
-		err := testingTool.Run(kubeClient, testingCase.Name)
+		glog.V(1).Infof("Running the testing case %q of %s", testingCase.Name, w.GetName())
+		err := testingTool.Run(kubeClient, testingCase)
 		if err != nil {
-			return errors.Wrapf(err, "Failed to create the resouces belong to testing case %q of %v", testingCase.Name, w.GetName())
-		}
-
-		// monitor the process of the testing case.
-		testingErr := make(chan error)
-
-		go testingTool.Monitor(kubeClient, testingErr)
-
-		err = <-testingErr
-		if err != nil {
-			return errors.Wrapf(err, "Failed to test the case %s", testingCase.Name)
+			return errors.Wrapf(err, "Failed to create the resouces belong to testing case %q of %s", testingCase.Name, w.GetName())
 		}
 
 		// get the testing results of the testing case.
+		glog.V(4).Infof("Starting fetch the testing results of the testing case %q", testingCase.Name)
 		err = testingTool.GetTestingResults(kubeClient)
 		if err != nil {
 			return errors.Wrapf(err, "Failed to gets the testing results of the testing case %s", testingCase.Name)
 		}
 
-		// clean up the resouces created by the testing case.
+		// clean up all the resouces created by the testing case.
+		glog.V(4).Infof("Cleaning up all the resouces created by the testing case %q", testingCase.Name)
 		err = testingTool.Cleanup(kubeClient)
 		if err != nil {
 			return errors.Wrapf(err, "Failed to cleanup the resouces created by the testing case %s", testingCase.Name)
 		}
 
 		// sleep some seconds between testing cases.
+		glog.V(4).Infof("Sleeping %v and starting next testing case.", testingTool.GetSteps())
 		time.Sleep(testingTool.GetSteps())
 	}
 	return nil
