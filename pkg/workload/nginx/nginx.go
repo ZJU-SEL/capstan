@@ -27,9 +27,10 @@ import (
 
 // Workload represents the nginx workload.
 type Workload struct {
-	workload workload.Workload
-	Name     string
-	Image    string
+	workload  workload.Workload
+	Name      string
+	Image     string
+	Frequency int
 }
 
 // Ensure nginx Workload implements workload.Interface
@@ -38,9 +39,10 @@ var _ workload.Interface = &Workload{}
 // NewWorkload creates a new nginx workload from the given workload definition.
 func NewWorkload(wl workload.Workload) *Workload {
 	return &Workload{
-		workload: wl,
-		Name:     wl.Name,
-		Image:    wl.Image,
+		workload:  wl,
+		Name:      wl.Name,
+		Image:     wl.Image,
+		Frequency: wl.Frequency,
 	}
 }
 
@@ -52,31 +54,33 @@ func (w *Workload) Run(kubeClient kubernetes.Interface) error {
 		return err
 	}
 
-	for _, testingCase := range testingTool.GetTestingCaseSet() {
-		// running a testing case.
-		glog.V(1).Infof("Running the testing case %q of %s", testingCase.Name, w.GetName())
-		err := testingTool.Run(kubeClient, testingCase)
-		if err != nil {
-			return errors.Wrapf(err, "Failed to create the resouces belong to testing case %q of %s", testingCase.Name, w.GetName())
-		}
+	for i := 1; i <= w.Frequency; i++ {
+		for _, testingCase := range testingTool.GetTestingCaseSet() {
+			// running a testing case.
+			glog.V(1).Infof("Repeat %d: Running the testing case %q of %s", i, testingCase.Name, w.GetName())
+			err := testingTool.Run(kubeClient, testingCase)
+			if err != nil {
+				return errors.Wrapf(err, "Failed to create the resouces belong to testing case %q of %s", testingCase.Name, w.GetName())
+			}
 
-		// get the testing results of the testing case.
-		glog.V(4).Infof("Starting fetch the testing results of the testing case %q", testingCase.Name)
-		err = testingTool.GetTestingResults(kubeClient)
-		if err != nil {
-			return errors.Wrapf(err, "Failed to gets the testing results of the testing case %s", testingCase.Name)
-		}
+			// get the testing results of the testing case.
+			glog.V(4).Infof("Repeat %d: Starting fetch the testing results of the testing case %q", i, testingCase.Name)
+			err = testingTool.GetTestingResults(kubeClient)
+			if err != nil {
+				return errors.Wrapf(err, "Failed to gets the testing results of the testing case %s", testingCase.Name)
+			}
 
-		// clean up all the resouces created by the testing case.
-		glog.V(4).Infof("Cleaning up all the resouces created by the testing case %q", testingCase.Name)
-		err = testingTool.Cleanup(kubeClient)
-		if err != nil {
-			return errors.Wrapf(err, "Failed to cleanup the resouces created by the testing case %s", testingCase.Name)
-		}
+			// clean up all the resouces created by the testing case.
+			glog.V(4).Infof("Repeat %d: Cleaning up all the resouces created by the testing case %q", i, testingCase.Name)
+			err = testingTool.Cleanup(kubeClient)
+			if err != nil {
+				return errors.Wrapf(err, "Failed to cleanup the resouces created by the testing case %s", testingCase.Name)
+			}
 
-		// sleep some seconds between testing cases.
-		glog.V(4).Infof("Sleeping %v and starting next testing case.", testingTool.GetSteps())
-		time.Sleep(testingTool.GetSteps())
+			// sleep some seconds between testing cases.
+			glog.V(4).Infof("Repeat %d: Sleeping %v and starting next testing case.", i, testingTool.GetSteps())
+			time.Sleep(testingTool.GetSteps())
+		}
 	}
 	return nil
 }
