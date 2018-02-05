@@ -20,22 +20,28 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
-	"github.com/ZJU-SEL/capstan/pkg/data/cadvisor"
+	"github.com/ZJU-SEL/capstan/pkg/prometheus"
 	"github.com/ZJU-SEL/capstan/pkg/workload"
 	"github.com/pkg/errors"
+	"github.com/satori/go.uuid"
 )
 
 var (
 	// ResultsDir is the directory of testing results.
 	ResultsDir = "/tmp/capstan"
+	// PushgatewayEndpoint is the endpoint of pushGateway.
+	PushgatewayEndpoint string
+	// UUID is used to mark a run of capstan.
+	UUID string
 )
 
 // Config is the internal representation of capstan configuration.
 type Config struct {
+	UUID       string `json:"UUID"`
 	ResultsDir string `json:"ResultsDir"`
 	Address    string `json:"Address"`
 	Steps      int    `json:"Steps"`
-	Cadvisor   cadvisor.Config
+	Prometheus prometheus.Config
 	Workloads  []workload.Workload
 }
 
@@ -51,8 +57,18 @@ func ReadConfig(filepath string) (Config, error) {
 	if err != nil {
 		return Config{}, errors.WithStack(err)
 	}
+
+	if config.UUID != "" {
+		UUID = config.UUID
+	} else {
+		UUID = uuid.NewV4().String()
+	}
+
 	if config.ResultsDir != "" {
 		ResultsDir = config.ResultsDir
 	}
+
+	PushgatewayEndpoint = config.Prometheus.PushgatewayEndpoint
+
 	return config, nil
 }

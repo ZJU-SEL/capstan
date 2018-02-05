@@ -18,13 +18,15 @@ package capstan
 
 import (
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
-	"github.com/ZJU-SEL/capstan/pkg/analysis"
 	"github.com/ZJU-SEL/capstan/pkg/capstan/loader"
 	"github.com/ZJU-SEL/capstan/pkg/capstan/types"
 	"github.com/ZJU-SEL/capstan/pkg/dashboard"
-	"github.com/ZJU-SEL/capstan/pkg/data/cadvisor"
+	"github.com/ZJU-SEL/capstan/pkg/prometheus"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
@@ -34,14 +36,13 @@ import (
 //
 // Basic workflow:
 //
-// 1. Load all workloads
-// 2. Start obtaining cadvisor data
-// 3. Start obtaining resource usage data of kubelet
-// 4. Start runs testing workload sequentially
+// 1. Read capstan config
+// 2. Load all workloads
+// 3. Start prometheus
+// 4. Start runs all testing workloads sequentially
 // 5. Launch the HTTP server
-// 6. Block analysis until a testing workload results has been returned
 func Run(kubeClient kubernetes.Interface, capstanConfig string) error {
-	// Read capstan config.
+	// 1. Read capstan config.
 	cfg, err := types.ReadConfig(capstanConfig)
 	if err != nil {
 		return errors.Wrap(err, "Failed read capstan config")
@@ -52,23 +53,21 @@ func Run(kubeClient kubernetes.Interface, capstanConfig string) error {
 		return errors.New("Testing workload not set, exit")
 	}
 
-	// 1. Load all workloads
+	// 2. Load all workloads
 	workloads, err := loader.LoadAllWorkloads(cfg.Workloads)
 	if err != nil {
 		return errors.Wrap(err, "Failed load workloads")
 	}
 
-	// 2. Start obtaining cadvisor data
-	cadvisorErr := make(chan error)
-	glog.V(1).Infof("Starting obtaining cadvisor data")
-	go func() {
-		cadvisorErr <- cadvisor.Start(cfg.Cadvisor)
-	}()
-
-	// 3. TODO(mozhuli): Start obtaining resource usage data of kubelet
+	// 3. Start prometheus
+	glog.V(1).Infof("Starting prometheus")
+	err = prometheus.Start(kubeClient, cfg.Prometheus)
+	if err != nil {
+		return errors.Wrap(err, "Failed start prometheus")
+	}
 
 	// 4. Start runs all testing workloads sequentially
-	doneTesting := make(chan bool, 1)
+	testingDone := make(chan bool)
 	testingErr := make(chan error)
 	go func() {
 		for _, wk := range workloads {
@@ -78,7 +77,7 @@ func Run(kubeClient kubernetes.Interface, capstanConfig string) error {
 			}
 			time.Sleep(time.Duration(cfg.Steps) * time.Second)
 		}
-		doneTesting <- true
+		testingDone <- true
 	}()
 
 	// 5. Launch the HTTP server
@@ -91,25 +90,23 @@ func Run(kubeClient kubernetes.Interface, capstanConfig string) error {
 		doneServ <- srv.ListenAndServe()
 	}()
 
-	// 6. Block analysis until a testing workload results has been returned
-	analysisErr := make(chan error)
-	go func() {
-		if <-doneTesting {
-			analysisErr <- analysis.Start(cfg.ResultsDir)
-		}
-	}()
+	term := make(chan os.Signal, 1)
+	signal.Notify(term, os.Interrupt, syscall.SIGTERM)
 
 	select {
-	case err := <-cadvisorErr:
-		return err
+	case <-testingDone:
+		glog.V(4).Info("Finished all tests")
+	case <-term:
+		glog.V(4).Info("Received SIGTERM, exiting gracefully...")
+		return deleteAllResources(kubeClient)
 	case err := <-testingErr:
 		return err
-	case err := <-analysisErr:
-		return err
 	case err := <-doneServ:
-		if err != nil {
-			return err
-		}
+		return err
 	}
 	return nil
+}
+
+func deleteAllResources(kubeClient kubernetes.Interface) error {
+	return errors.Errorf("Not Implemented")
 }

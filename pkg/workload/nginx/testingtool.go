@@ -17,9 +17,12 @@ limitations under the License.
 package nginx
 
 import (
+	"bufio"
+	"bytes"
 	"io/ioutil"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,6 +30,8 @@ import (
 	"github.com/ZJU-SEL/capstan/pkg/workload"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/push"
 	v1 "k8s.io/api/core/v1"
 	apismetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -50,6 +55,8 @@ type TestingTool struct {
 	Name           string
 	Image          string
 	Steps          time.Duration
+	StartTime      time.Time
+	WorkloadNode   string
 	CurrentTesting workload.TestingCase
 	TestingCaseSet []workload.TestingCase
 }
@@ -60,6 +67,7 @@ var _ workload.Tool = &TestingTool{}
 // Run runs the defined testing case set for wrk testing tool (to adhere to workload.Tool interface).
 func (t *TestingTool) Run(kubeClient kubernetes.Interface, testingCase workload.TestingCase) error {
 	t.CurrentTesting = testingCase
+	t.StartTime = time.Now()
 
 	// 1. start a workload for the testing case.
 	workloadPodName := t.workloadPodName(testingCase.Name)
@@ -79,12 +87,13 @@ func (t *TestingTool) Run(kubeClient kubernetes.Interface, testingCase workload.
 		return errors.Wrapf(err, "unable to create the %s workload for testing case %s", t.Workload.GetName(), testingCase.Name)
 	}
 
-	// 2. get the pod ip of the workload until workload is running.
-	glog.V(4).Infof("Geting the pod ip of workload %s", workloadPodName)
-	podIP, err := t.getRunningPodIP(kubeClient, workloadPodName)
+	// 2. get the podIP and hostIP of the workload until workload is running.
+	glog.V(4).Infof("Geting the podIP and hostIP of workload %s", workloadPodName)
+	podIP, hostIP, err := t.getIPs(kubeClient, workloadPodName)
 	if err != nil {
-		return errors.Wrapf(err, "unable to find pod %s's ip created by the %s workload for testing case %s", workloadPodName, t.Workload.GetName(), testingCase.Name)
+		return errors.Wrapf(err, "unable to get podIP and hostIP of pod %s created by the %s workload for testing case %s", workloadPodName, t.Workload.GetName(), testingCase.Name)
 	}
+	t.WorkloadNode = hostIP
 
 	// 3. start a testing pod for testing the workload.
 	testingPodName := t.testingPodName(testingCase.Name)
@@ -111,7 +120,7 @@ func (t *TestingTool) Run(kubeClient kubernetes.Interface, testingCase workload.
 	return nil
 }
 
-//GetTestingResults gets the testing results of wrk testing case (to adhere to workload.Tool interface).
+// GetTestingResults gets the testing results of wrk testing case (to adhere to workload.Tool interface).
 func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 	name := t.testingPodName(t.CurrentTesting.Name)
 	for {
@@ -143,7 +152,9 @@ func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 		glog.V(5).Infof("Checking testing has done:\n%s", string(body))
 		if workload.HasTestingDone(body) {
 			glog.V(4).Infof("Testing case %s has done", t.CurrentTesting.Name)
-			outdir := path.Join(types.ResultsDir, "workloads", t.Workload.GetName(), t.GetName(), t.CurrentTesting.Name)
+
+			// export to capstan result directory.
+			outdir := path.Join(types.ResultsDir, types.UUID, "workloads", t.Workload.GetName(), t.GetName(), t.CurrentTesting.Name)
 			if err = os.MkdirAll(outdir, 0755); err != nil {
 				return errors.WithStack(err)
 			}
@@ -152,6 +163,37 @@ func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 			if err = ioutil.WriteFile(outfile, body, 0644); err != nil {
 				return errors.WithStack(err)
 			}
+
+			// export to prometheus pushGateway.
+			data, err := getQPS(body)
+			if err != nil {
+				return errors.Wrapf(err, "Failed to get QPS")
+			}
+
+			qps := prometheus.NewGauge(prometheus.GaugeOpts{
+				Name: "capstan_wrk_qps",
+				Help: "The qps of wrk testing case",
+			})
+			qps.Set(data)
+			if err := push.Collectors(
+				"wrk",
+				map[string]string{
+					"uid":           types.UUID,
+					"startTime":     t.StartTime.Format("2006-01-02 15:04:05"),
+					"endTime":       time.Now().Format("2006-01-02 15:04:05"),
+					"workloadNode":  t.WorkloadNode,
+					"testingNode":   pod.Status.HostIP,
+					"workloadName":  t.Workload.GetName(),
+					"workloadImage": t.Workload.GetImage(),
+					"testingName":   t.GetName(),
+					"testingCase":   t.CurrentTesting.Name,
+				},
+				types.PushgatewayEndpoint,
+				qps,
+			); err != nil {
+				return errors.Wrapf(err, "Could not push metrics to Pushgateway")
+			}
+
 			return nil
 		}
 	}
@@ -188,9 +230,9 @@ func (t *TestingTool) GetTestingCaseSet() []workload.TestingCase {
 	return t.TestingCaseSet
 }
 
-// getRunningPodIP finds the running pod's ip created by a workload, If no pod is found,
+// getIPs gets podIP and hostIP of a running pod created by a workload, If no pod is found,
 // or if pod's status is not running, returns an error.
-func (t *TestingTool) getRunningPodIP(kubeClient kubernetes.Interface, name string) (string, error) {
+func (t *TestingTool) getIPs(kubeClient kubernetes.Interface, name string) (string, string, error) {
 	n := 0
 	for {
 		// Sleep between each poll, which should give the workload enough time to create a Pod
@@ -200,21 +242,21 @@ func (t *TestingTool) getRunningPodIP(kubeClient kubernetes.Interface, name stri
 		// Make sure there's a pod.
 		pod, err := kubeClient.CoreV1().Pods(workload.DefaultNamespace).Get(name, apismetav1.GetOptions{})
 		if err != nil {
-			return "", errors.WithStack(err)
+			return "", "", errors.WithStack(err)
 		}
 
 		// Make sure the pod isn't failing.
 		if isFailing, err := workload.IsPodFailing(pod); isFailing {
-			return "", err
+			return "", "", err
 		}
 
 		if pod.Status.Phase == v1.PodRunning {
-			return pod.Status.PodIP, nil
+			return pod.Status.PodIP, pod.Status.HostIP, nil
 		}
 
 		// return an error, if has not get the pod ip for 60 seconds.
 		if n > 5 {
-			return "", errors.Errorf("long time to get pod %s ip", name)
+			return "", "", errors.Errorf("long time to get pod %s ip", name)
 		}
 		n++
 	}
@@ -237,4 +279,19 @@ func (t *TestingTool) workloadPodName(testingName string) string {
 
 func (t *TestingTool) testingPodName(testingName string) string {
 	return strings.ToLower("capstan-" + t.GetName() + "-" + testingName)
+}
+
+func getQPS(data []byte) (float64, error) {
+	scanner := bufio.NewScanner(bytes.NewBuffer(data))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.Contains(line, "Requests/sec") {
+			qps, err := strconv.ParseFloat(strings.Fields(line)[1], 64)
+			if err != nil {
+				return 0, errors.WithStack(err)
+			}
+			return qps, nil
+		}
+	}
+	return 0, errors.Errorf("results not contain Requests/sec")
 }
