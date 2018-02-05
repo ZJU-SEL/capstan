@@ -14,18 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cadvisor
+package prometheus
 
 import (
 	"github.com/pkg/errors"
+	"k8s.io/client-go/kubernetes"
 )
 
-// Config is the internal representation of cadvisor configuration.
+// Config is the internal representation of prometheus configuration.
 type Config struct {
-	Sampling int `json:"Sampling"`
+	PushgatewayEndpoint string `json:"PushgatewayEndpoint"`
 }
 
-// Start is the entry to start obtaining cadvisor data.
-func Start(cfg Config) error {
+// Start is the entry to start prometheus.
+func Start(kubeClient kubernetes.Interface, cfg Config) error {
 	return errors.Errorf("Not Implemented")
 }

@@ -62,6 +62,7 @@ type Tool interface {
 type Workload struct {
 	Name        string `json:"name"`
 	Image       string `json:"image"`
+	Frequency   int    `json:"frequency"`
 	TestingTool TestingTool
 }
 
