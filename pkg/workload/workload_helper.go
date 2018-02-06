@@ -57,13 +57,7 @@ func CreatePod(kubeClient kubernetes.Interface, podBytes []byte) error {
 
 	_, err := kubeClient.CoreV1().Pods(DefaultNamespace).Create(pod)
 	if err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return errors.WithStack(err)
-		}
-
-		if _, err = kubeClient.CoreV1().Pods(DefaultNamespace).Update(pod); err != nil {
-			return errors.WithStack(err)
-		}
+		return errors.WithStack(err)
 	}
 
 	return nil

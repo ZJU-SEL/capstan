@@ -108,7 +108,7 @@ spec:
         topologyKey: "kubernetes.io/hostname"
   containers:
   - name: testing-wrk
-    image: williamyeh/wrk
+    image: {{ .Image }}
     imagePullPolicy: Always
     args: [{{ .Args }}]
     env:
