@@ -30,7 +30,7 @@ import (
 
 var (
 	kubeconfig    = pflag.String("kubeconfig", "/etc/kubernetes/admin.conf", "path to kubernetes admin config file")
-	capstanConfig = pflag.String("capstanconfig", "/etc/capstan.conf", "path to capstan config file")
+	capstanConfig = pflag.String("config", "/etc/capstan/config", "path to capstan config file")
 	version       = pflag.Bool("version", false, "Display version")
 	// VERSION is the version of capstan.
 	VERSION = "1.0"
