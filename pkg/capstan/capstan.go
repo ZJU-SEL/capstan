@@ -26,7 +26,6 @@ import (
 	"github.com/ZJU-SEL/capstan/pkg/capstan/loader"
 	"github.com/ZJU-SEL/capstan/pkg/capstan/types"
 	"github.com/ZJU-SEL/capstan/pkg/dashboard"
-	"github.com/ZJU-SEL/capstan/pkg/prometheus"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
@@ -38,9 +37,8 @@ import (
 //
 // 1. Read capstan config
 // 2. Load all workloads
-// 3. Start prometheus
-// 4. Start runs all testing workloads sequentially
-// 5. Launch the HTTP server
+// 3. Start runs all testing workloads sequentially
+// 4. Launch the HTTP server
 func Run(kubeClient kubernetes.Interface, capstanConfig string) error {
 	// 1. Read capstan config.
 	cfg, err := types.ReadConfig(capstanConfig)
@@ -59,14 +57,7 @@ func Run(kubeClient kubernetes.Interface, capstanConfig string) error {
 		return errors.Wrap(err, "Failed load workloads")
 	}
 
-	// 3. Start prometheus
-	glog.V(1).Infof("Starting prometheus")
-	err = prometheus.Start(kubeClient, cfg.Prometheus)
-	if err != nil {
-		return errors.Wrap(err, "Failed start prometheus")
-	}
-
-	// 4. Start runs all testing workloads sequentially
+	// 3. Start runs all testing workloads sequentially
 	testingDone := make(chan bool)
 	testingErr := make(chan error)
 	go func() {
@@ -80,7 +71,7 @@ func Run(kubeClient kubernetes.Interface, capstanConfig string) error {
 		testingDone <- true
 	}()
 
-	// 5. Launch the HTTP server
+	// 4. Launch the HTTP server
 	srv := &http.Server{
 		Addr:    cfg.Address,
 		Handler: dashboard.NewHandler(),
