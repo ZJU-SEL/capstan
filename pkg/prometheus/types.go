@@ -16,17 +16,7 @@ limitations under the License.
 
 package prometheus
 
-import (
-	"github.com/pkg/errors"
-	"k8s.io/client-go/kubernetes"
-)
-
 // Config is the internal representation of prometheus configuration.
 type Config struct {
 	PushgatewayEndpoint string `json:"PushgatewayEndpoint"`
-}
-
-// Start is the entry to start prometheus.
-func Start(kubeClient kubernetes.Interface, cfg Config) error {
-	return errors.Errorf("Not Implemented")
 }
