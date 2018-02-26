@@ -84,13 +84,13 @@ type TestingCase struct {
 // DefWorkloads is the defined workloads.
 var DefWorkloads = []string{
 	"nginx",
-	"iperf",
+	"iperf3",
 }
 
 // DefTools is list of the defined testing tools.
 var DefTools = []string{
 	"wrk",
-	"iperf",
+	"iperf3",
 }
 
 // TestingCaseSetHasDefined finds whether all the string in slice a have defined in slice b or not.
