@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package nginx
+package iperf3
 
 import (
 	"bufio"
@@ -38,18 +38,18 @@ import (
 )
 
 const (
-	toolName               = "wrk"
-	benchmarkPodIPSameNode = "benchmarkPodIPSameNode"
-	benchmarkPodIPDiffNode = "benchmarkPodIPDiffNode"
+	toolName             = "iperf3"
+	benchmarkTCPSameNode = "benchmarkTCPSameNode"
+	benchmarkTCPDiffNode = "benchmarkTCPDiffNode"
 )
 
-// TestingCaseSet is the list of wrk defined testing case.
+// TestingCaseSet is the list of iperf3 defined testing cases.
 var TestingCaseSet = []string{
-	"benchmarkPodIPSameNode",
-	"benchmarkPodIPDiffNode",
+	"benchmarkTCPSameNode",
+	"benchmarkTCPDiffNode",
 }
 
-// TestingTool represents the wrk testing tool.
+// TestingTool represents the iperf3 testing tool.
 type TestingTool struct {
 	Workload       *Workload
 	Name           string
@@ -61,29 +61,29 @@ type TestingTool struct {
 	TestingCaseSet []workload.TestingCase
 }
 
-// Ensure wrk testing tool implements workload.Tool interface.
+// Ensure iperf3 testing tool implements workload.Tool interface.
 var _ workload.Tool = &TestingTool{}
 
-// Run runs the defined testing case set for wrk testing tool (to adhere to workload.Tool interface).
+// Run runs the defined testing case set for iperf3 testing tool (to adhere to workload.Tool interface).
 func (t *TestingTool) Run(kubeClient kubernetes.Interface, testingCase workload.TestingCase) error {
 	t.CurrentTesting = testingCase
 	t.StartTime = time.Now()
 
 	// 1. start a workload for the testing case.
-	workloadPodName := workload.BuildWorkloadPodName(t.Workload.GetName(), testingCase.Name)
+	workloadPodName := workload.BuildWorkloadPodName(t.Workload.GetName()+"-server", testingCase.Name)
 	tempWorkloadArgs := struct{ Name, TestingName, Image string }{
 		Name:        workloadPodName,
 		TestingName: testingCase.Name,
 		Image:       t.Workload.GetImage(),
 	}
 
-	nginxPodBytes, err := workload.ParseTemplate(nginxPod, tempWorkloadArgs)
+	iperfServerPodBytes, err := workload.ParseTemplate(iperfServerPod, tempWorkloadArgs)
 	if err != nil {
-		return errors.Wrapf(err, "unable to parse %v using %v", nginxPod, tempWorkloadArgs)
+		return errors.Wrapf(err, "unable to parse %v using %v", iperfServerPod, tempWorkloadArgs)
 	}
 
 	glog.V(4).Infof("Creating workload %q of testing case %s", workloadPodName, testingCase.Name)
-	if err := workload.CreatePod(kubeClient, nginxPodBytes); err != nil {
+	if err := workload.CreatePod(kubeClient, iperfServerPodBytes); err != nil {
 		return errors.Wrapf(err, "unable to create the %s workload for testing case %s", t.Workload.GetName(), testingCase.Name)
 	}
 
@@ -96,7 +96,7 @@ func (t *TestingTool) Run(kubeClient kubernetes.Interface, testingCase workload.
 	t.WorkloadNode = hostIP
 
 	// 3. start a testing pod for testing the workload.
-	testingPodName := workload.BuildTestingPodName(t.GetName(), testingCase.Name)
+	testingPodName := workload.BuildTestingPodName(t.GetName()+"-client", testingCase.Name)
 	testingPod, args := t.findTemplate(testingCase.Name)
 	tempTestingArgs := struct{ Name, TestingName, Image, WorkloadName, Args, PodIP string }{
 		Name:         testingPodName,
@@ -120,9 +120,9 @@ func (t *TestingTool) Run(kubeClient kubernetes.Interface, testingCase workload.
 	return nil
 }
 
-// GetTestingResults gets the testing results of wrk testing case (to adhere to workload.Tool interface).
+// GetTestingResults gets the testing results of iperf3 testing case (to adhere to workload.Tool interface).
 func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
-	name := workload.BuildTestingPodName(t.GetName(), t.CurrentTesting.Name)
+	name := workload.BuildTestingPodName(t.GetName()+"-client", t.CurrentTesting.Name)
 	for {
 		// Sleep between each poll
 		// TODO(mozhuli): Use a watcher instead of polling.
@@ -165,18 +165,18 @@ func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 			}
 
 			// export to prometheus pushGateway.
-			data, err := getQPS(body)
+			data, err := getBandwidth(body)
 			if err != nil {
-				return errors.Wrapf(err, "Failed to get QPS")
+				return errors.Wrapf(err, "Failed to get bandwidth")
 			}
 
-			qps := prometheus.NewGauge(prometheus.GaugeOpts{
-				Name: "capstan_wrk_qps",
-				Help: "The qps of wrk testing case",
+			bandwidth := prometheus.NewGauge(prometheus.GaugeOpts{
+				Name: "capstan_iperf3_bandwidth",
+				Help: "The bandwidth of iperf3 testing case",
 			})
-			qps.Set(data)
+			bandwidth.Set(data)
 			if err := push.Collectors(
-				"wrk",
+				"iperf3",
 				map[string]string{
 					"uid":          types.UUID,
 					"startTime":    t.StartTime.Format("2006-01-02 15:04:05"),
@@ -188,7 +188,7 @@ func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 					"testingCase":  t.CurrentTesting.Name,
 				},
 				types.PushgatewayEndpoint,
-				qps,
+				bandwidth,
 			); err != nil {
 				return errors.Wrapf(err, "Could not push metrics to Pushgateway")
 			}
@@ -198,23 +198,23 @@ func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 	}
 }
 
-// Cleanup cleans up all resources created by a testing case for wrk testing tool (to adhere to workload.Tool interface).
+// Cleanup cleans up all resources created by a testing case for iperf3 testing tool (to adhere to workload.Tool interface).
 func (t *TestingTool) Cleanup(kubeClient kubernetes.Interface) error {
-	if err := workload.DeletePod(kubeClient, workload.BuildTestingPodName(t.GetName(), t.CurrentTesting.Name)); err != nil {
+	if err := workload.DeletePod(kubeClient, workload.BuildTestingPodName(t.GetName()+"-client", t.CurrentTesting.Name)); err != nil {
 		return err
 	}
-	if err := workload.DeletePod(kubeClient, workload.BuildWorkloadPodName(t.Workload.GetName(), t.CurrentTesting.Name)); err != nil {
+	if err := workload.DeletePod(kubeClient, workload.BuildWorkloadPodName(t.Workload.GetName()+"-server", t.CurrentTesting.Name)); err != nil {
 		return err
 	}
 	return nil
 }
 
-// GetName returns the name of wrk testing tool (to adhere to workload.Tool interface).
+// GetName returns the name of iperf3 testing tool (to adhere to workload.Tool interface).
 func (t *TestingTool) GetName() string {
 	return t.Name
 }
 
-// GetImage returns the image name of wrk testing tool (to adhere to workload.Tool interface).
+// GetImage returns the image name of iperf3 testing tool (to adhere to workload.Tool interface).
 func (t *TestingTool) GetImage() string {
 	return t.Image
 }
@@ -224,33 +224,36 @@ func (t *TestingTool) GetSteps() time.Duration {
 	return t.Steps
 }
 
-// GetTestingCaseSet returns the testing case set which the wrk testing tool will run (to adhere to workload.Tool interface).
+// GetTestingCaseSet returns the testing case set which the iperf3 testing tool will run (to adhere to workload.Tool interface).
 func (t *TestingTool) GetTestingCaseSet() []workload.TestingCase {
 	return t.TestingCaseSet
 }
 
 // findTemplate returns the true testing tool template and arguments for different testing cases.
 func (t *TestingTool) findTemplate(name string) (string, string) {
-	if t.CurrentTesting.Name == benchmarkPodIPDiffNode {
-		return wrkPodAntiAffinity, t.CurrentTesting.TestingToolArgs
+	if t.CurrentTesting.Name == benchmarkTCPDiffNode {
+		return iperfClientPodAntiAffinity, t.CurrentTesting.TestingToolArgs
 	}
-	if t.CurrentTesting.Name == benchmarkPodIPSameNode {
-		return wrkPodAffinity, t.CurrentTesting.TestingToolArgs
+	if t.CurrentTesting.Name == benchmarkTCPSameNode {
+		return iperfClientPodAffinity, t.CurrentTesting.TestingToolArgs
 	}
 	return "", ""
 }
 
-func getQPS(data []byte) (float64, error) {
+func getBandwidth(data []byte) (float64, error) {
 	scanner := bufio.NewScanner(bytes.NewBuffer(data))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if strings.Contains(line, "Requests/sec") {
-			qps, err := strconv.ParseFloat(strings.Fields(line)[1], 64)
+		if strings.Contains(line, "receiver") {
+			bw, err := strconv.ParseFloat(strings.Fields(line)[6], 64)
 			if err != nil {
 				return 0, errors.WithStack(err)
 			}
-			return qps, nil
+			if strings.Fields(line)[7] == "Gbits/sec" {
+				return bw * 1024, nil
+			}
+			return bw, nil
 		}
 	}
-	return 0, errors.Errorf("results not contain Requests/sec")
+	return 0, errors.Errorf("results not contain receiver")
 }
