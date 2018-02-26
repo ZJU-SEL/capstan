@@ -118,6 +118,38 @@ func IsPodFailing(pod *v1.Pod) (bool, error) {
 	return false, nil
 }
 
+// GetIPs gets podIP and hostIP of a running pod created by a workload, If no pod is found,
+// or if pod's status is not running, returns an error.
+func GetIPs(kubeClient kubernetes.Interface, name string) (string, string, error) {
+	n := 0
+	for {
+		// Sleep between each poll, which should give the workload enough time to create a Pod
+		// TODO(mozhuli): Use a watcher instead of polling.
+		time.Sleep(10 * time.Second)
+
+		// Make sure there's a pod.
+		pod, err := kubeClient.CoreV1().Pods(DefaultNamespace).Get(name, apismetav1.GetOptions{})
+		if err != nil {
+			return "", "", errors.WithStack(err)
+		}
+
+		// Make sure the pod isn't failing.
+		if isFailing, err := IsPodFailing(pod); isFailing {
+			return "", "", err
+		}
+
+		if pod.Status.Phase == v1.PodRunning {
+			return pod.Status.PodIP, pod.Status.HostIP, nil
+		}
+
+		// return an error, if has not get the pod ip for 60 seconds.
+		if n > 5 {
+			return "", "", errors.Errorf("long time to get pod %s ip", name)
+		}
+		n++
+	}
+}
+
 // HasTestingDone checks the testing case has finished
 // or not(use the finish mark "Capstan Testing Done").
 func HasTestingDone(data []byte) bool {
@@ -143,4 +175,14 @@ func FomatArgs(agrs string) string {
 		}
 	}
 	return str
+}
+
+// BuildWorkloadPodName builds the name of workload pod.
+func BuildWorkloadPodName(name, testingName string) string {
+	return strings.ToLower("capstan-" + name + "-" + testingName)
+}
+
+// BuildTestingPodName builds the name of testing pod.
+func BuildTestingPodName(name, testingName string) string {
+	return strings.ToLower("capstan-" + name + "-" + testingName)
 }

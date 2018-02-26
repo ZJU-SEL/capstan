@@ -18,7 +18,7 @@ package loader
 
 import (
 	"github.com/ZJU-SEL/capstan/pkg/workload"
-	"github.com/ZJU-SEL/capstan/pkg/workload/iperf"
+	"github.com/ZJU-SEL/capstan/pkg/workload/iperf3"
 	"github.com/ZJU-SEL/capstan/pkg/workload/nginx"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
@@ -51,8 +51,8 @@ func loadWorkload(wl workload.Workload) (workload.Interface, error) {
 	switch wl.Name {
 	case "nginx":
 		return nginx.NewWorkload(wl), nil
-	case "iperf":
-		return iperf.NewWorkload(wl), nil
+	case "iperf3":
+		return iperf3.NewWorkload(wl), nil
 	default:
 		return nil, errors.Errorf("unknown workload %v", wl.Name)
 	}
