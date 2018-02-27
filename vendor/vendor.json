@@ -3,6 +3,20 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "Cslv4/ITyQmgjSUhNXFu8q5bqOU=",
+			"origin": "k8s.io/client-go/vendor/cloud.google.com/go/compute/metadata",
+			"path": "cloud.google.com/go/compute/metadata",
+			"revision": "d8b352f6b2b31a09b86fa7d14b7e70ccb77590cd",
+			"revisionTime": "2018-01-16T17:41:21Z"
+		},
+		{
+			"checksumSHA1": "hiJXjkFEGy+sDFf6O58Ocdy9Rnk=",
+			"origin": "k8s.io/client-go/vendor/cloud.google.com/go/internal",
+			"path": "cloud.google.com/go/internal",
+			"revision": "d8b352f6b2b31a09b86fa7d14b7e70ccb77590cd",
+			"revisionTime": "2018-01-16T17:41:21Z"
+		},
+		{
 			"checksumSHA1": "spyv5/YFBjYyZLZa1U2LBfDR8PM=",
 			"path": "github.com/beorn7/perks/quantile",
 			"revision": "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9",
@@ -223,6 +237,20 @@
 			"revisionTime": "2018-01-16T17:41:21Z"
 		},
 		{
+			"checksumSHA1": "2nv6VV1DEv3PeH+toJVSHd3OxGE=",
+			"origin": "k8s.io/client-go/vendor/golang.org/x/net/context",
+			"path": "golang.org/x/net/context",
+			"revision": "d8b352f6b2b31a09b86fa7d14b7e70ccb77590cd",
+			"revisionTime": "2018-01-16T17:41:21Z"
+		},
+		{
+			"checksumSHA1": "3E7SiqZU7Bj+zFvMH0/HElieh1k=",
+			"origin": "k8s.io/client-go/vendor/golang.org/x/net/context/ctxhttp",
+			"path": "golang.org/x/net/context/ctxhttp",
+			"revision": "d8b352f6b2b31a09b86fa7d14b7e70ccb77590cd",
+			"revisionTime": "2018-01-16T17:41:21Z"
+		},
+		{
 			"checksumSHA1": "kyg0RtP8/9yWNDqf+hDaedKzf18=",
 			"origin": "k8s.io/apimachinery/vendor/golang.org/x/net/http2",
 			"path": "golang.org/x/net/http2",
@@ -249,6 +277,41 @@
 			"path": "golang.org/x/net/lex/httplex",
 			"revision": "d40b72863885248607ceac2631cd78de166f51c3",
 			"revisionTime": "2018-01-12T18:56:01Z"
+		},
+		{
+			"checksumSHA1": "SmjxBKlxa3UCybsDOYgPCJPp+rE=",
+			"origin": "k8s.io/client-go/vendor/golang.org/x/oauth2",
+			"path": "golang.org/x/oauth2",
+			"revision": "d8b352f6b2b31a09b86fa7d14b7e70ccb77590cd",
+			"revisionTime": "2018-01-16T17:41:21Z"
+		},
+		{
+			"checksumSHA1": "WoxJyQYRAnczy053isRuGc0ckWQ=",
+			"origin": "k8s.io/client-go/vendor/golang.org/x/oauth2/google",
+			"path": "golang.org/x/oauth2/google",
+			"revision": "d8b352f6b2b31a09b86fa7d14b7e70ccb77590cd",
+			"revisionTime": "2018-01-16T17:41:21Z"
+		},
+		{
+			"checksumSHA1": "BAkyxbaxkrZbzGtfG5iX8v6ypIo=",
+			"origin": "k8s.io/client-go/vendor/golang.org/x/oauth2/internal",
+			"path": "golang.org/x/oauth2/internal",
+			"revision": "d8b352f6b2b31a09b86fa7d14b7e70ccb77590cd",
+			"revisionTime": "2018-01-16T17:41:21Z"
+		},
+		{
+			"checksumSHA1": "a2SmWVi9oTE1TMNcIQkW4aCpVyo=",
+			"origin": "k8s.io/client-go/vendor/golang.org/x/oauth2/jws",
+			"path": "golang.org/x/oauth2/jws",
+			"revision": "d8b352f6b2b31a09b86fa7d14b7e70ccb77590cd",
+			"revisionTime": "2018-01-16T17:41:21Z"
+		},
+		{
+			"checksumSHA1": "/eV4E08BY+f1ZikiR7OOMJAj3m0=",
+			"origin": "k8s.io/client-go/vendor/golang.org/x/oauth2/jwt",
+			"path": "golang.org/x/oauth2/jwt",
+			"revision": "d8b352f6b2b31a09b86fa7d14b7e70ccb77590cd",
+			"revisionTime": "2018-01-16T17:41:21Z"
 		},
 		{
 			"checksumSHA1": "+hUOPh9CNQjoXFCyIIpQx6W8QWI=",
@@ -877,6 +940,12 @@
 			"revisionTime": "2018-01-16T17:41:21Z"
 		},
 		{
+			"checksumSHA1": "Ql/ZJ1I0/09uYNg5krWgRfgo8a4=",
+			"path": "k8s.io/client-go/plugin/pkg/client/auth/gcp",
+			"revision": "d8b352f6b2b31a09b86fa7d14b7e70ccb77590cd",
+			"revisionTime": "2018-01-16T17:41:21Z"
+		},
+		{
 			"checksumSHA1": "nPNs7pFcas3nXWV2U+EYIVB9Bx4=",
 			"path": "k8s.io/client-go/rest",
 			"revision": "d8b352f6b2b31a09b86fa7d14b7e70ccb77590cd",
@@ -885,6 +954,12 @@
 		{
 			"checksumSHA1": "M0FDUGLtrZ2OMNA34i/CKv8fTrE=",
 			"path": "k8s.io/client-go/rest/watch",
+			"revision": "d8b352f6b2b31a09b86fa7d14b7e70ccb77590cd",
+			"revisionTime": "2018-01-16T17:41:21Z"
+		},
+		{
+			"checksumSHA1": "rh+WvxWjq34Hm63aP1oTo/o9v6Y=",
+			"path": "k8s.io/client-go/third_party/forked/golang/template",
 			"revision": "d8b352f6b2b31a09b86fa7d14b7e70ccb77590cd",
 			"revisionTime": "2018-01-16T17:41:21Z"
 		},
@@ -957,6 +1032,12 @@
 		{
 			"checksumSHA1": "Tz4+3bd81dk/H90Lz5S9WjlnGSg=",
 			"path": "k8s.io/client-go/util/integer",
+			"revision": "d8b352f6b2b31a09b86fa7d14b7e70ccb77590cd",
+			"revisionTime": "2018-01-16T17:41:21Z"
+		},
+		{
+			"checksumSHA1": "FANFNcbR510nfalbxPx6MRMApgc=",
+			"path": "k8s.io/client-go/util/jsonpath",
 			"revision": "d8b352f6b2b31a09b86fa7d14b7e70ccb77590cd",
 			"revisionTime": "2018-01-16T17:41:21Z"
 		}
