@@ -81,7 +81,7 @@ systemctl start docker
 ### Install Pushgateway
 
 ```sh
-docker run --rm -d -p 9091:9091 prom/pushgateway
+docker run -d -p 9091:9091 prom/pushgateway
 ```
 
 ### Install Prometheus
@@ -103,13 +103,24 @@ EOF
 Start Prometheus:
 
 ```sh
-docker run --rm -d -p 9090:9090 -v /tmp/prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus
+docker run -d -p 9090:9090 -v /tmp/prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus
 ```
 
 ### Install Grafana
 
 ```sh
-docker run --rm -d -p 3000:3000 grafana/grafana
+mkdir -p /tmp/provisioning/datasources
+cat >/tmp/provisioning/datasources/prometheus.yaml <<EOF
+apiVersion: 1
+datasources:
+  - name: prometheus
+    type: prometheus
+    access: proxy
+    url: http://<Your-HostIP>:9090
+    basicAuth: false
+    editable: true
+EOF
+docker run -d -p 3000:3000 -v /tmp/provisioning/datasources:/etc/grafana/provisioning/datasources grafana/grafana
 ```
 
 ### Install capstan
@@ -145,11 +156,11 @@ cat >/etc/capstan/config <<EOF
                 "testingCaseSet": [
                     {
                         "name": "benchmarkPodIPDiffNode",
-                        "testingToolArgs": "-t10 -c100 -d90 http://$(ENDPOINT)/"
+                        "testingToolArgs": "-t10 -c100 -d90 http://\$(ENDPOINT)/"
                     },
                     {
                         "name": "benchmarkPodIPSameNode",
-                        "testingToolArgs": "-t10 -c100 -d90 http://$(ENDPOINT)/"
+                        "testingToolArgs": "-t10 -c100 -d90 http://\$(ENDPOINT)/"
                     }
                 ]
             }
