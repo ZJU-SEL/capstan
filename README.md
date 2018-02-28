@@ -43,7 +43,7 @@ Install Prometheus and Grafana:
 # install Docker
 apt-get install docker.io -y
 # install Pushgateway
-docker run --rm -d -p 9091:9091 prom/pushgateway
+docker run -d -p 9091:9091 prom/pushgateway
 # install Prometheus
 cat >/tmp/prometheus.yml <<EOF
 global:
@@ -52,11 +52,22 @@ global:
 scrape_configs:
   - job_name: 'pushgateway'
     static_configs:
-      - targets: ['127.0.0.1:9091']
+      - targets: ['<Your-HostIP>:9091']
 EOF
-docker run --rm -d -p 9090:9090 -v /tmp/prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus
+docker run -d -p 9090:9090 -v /tmp/prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus
 # install Grafana
-docker run --rm -d -p 3000:3000 grafana/grafana
+mkdir -p /tmp/provisioning/datasources
+cat >/tmp/provisioning/datasources/prometheus.yaml <<EOF
+apiVersion: 1
+datasources:
+  - name: prometheus
+    type: prometheus
+    access: proxy
+    url: http://<Your-HostIP>:9090
+    basicAuth: false
+    editable: true
+EOF
+docker run -d -p 3000:3000 -v /tmp/provisioning/datasources:/etc/grafana/provisioning/datasources grafana/grafana
 ```
 
 Prepare Kubernetes admin config file:
@@ -72,7 +83,7 @@ cat >/etc/capstan/config <<EOF
 {
     "ResultsDir": "/tmp/capstan",
     "Prometheus": {
-        "PushgatewayEndpoint": "http://127.0.0.1:9091"
+        "PushgatewayEndpoint": "http://<Your-HostIP>:9091"
     },
     "Steps": 10,
     "Workloads": [
@@ -87,11 +98,11 @@ cat >/etc/capstan/config <<EOF
                 "testingCaseSet": [
                     {
                         "name": "benchmarkPodIPDiffNode",
-                        "testingToolArgs": "-t10 -c100 -d90 http://$(ENDPOINT)/"
+                        "testingToolArgs": "-t10 -c100 -d90 http://\$(ENDPOINT)/"
                     },
                     {
                         "name": "benchmarkPodIPSameNode",
-                        "testingToolArgs": "-t10 -c100 -d90 http://$(ENDPOINT)/"
+                        "testingToolArgs": "-t10 -c100 -d90 http://\$(ENDPOINT)/"
                     }
                 ]
             }
