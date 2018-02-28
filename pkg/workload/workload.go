@@ -85,12 +85,14 @@ type TestingCase struct {
 var DefWorkloads = []string{
 	"nginx",
 	"iperf3",
+	"mysql",
 }
 
 // DefTools is list of the defined testing tools.
 var DefTools = []string{
 	"wrk",
 	"iperf3",
+	"tpcc-mysql",
 }
 
 // TestingCaseSetHasDefined finds whether all the string in slice a have defined in slice b or not.

@@ -14,16 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package iperf3
+package mysql
 
 const (
-	iperfServerPod = `
+	mysqlPod = `
 apiVersion: v1
 kind: Pod
 metadata:
   name: {{ .Name }}
   annotations:
-    capstan-workload: iperf3
+    capstan-workload: mysql
     capstan-testingcase: {{ .TestingName }}
   labels:
     component: capstan
@@ -31,12 +31,14 @@ metadata:
   namespace: capstan
 spec:
   containers:
-  - name: workload-iperf3
+  - name: workload-mysql
     image: {{ .Image }}
     imagePullPolicy: Always
-    args: ["-s"]
     ports:
-    - containerPort: 5201
+    - containerPort: 3306
+    env:
+    - name: MYSQL_ALLOW_EMPTY_PASSWORD
+      value: "yes"
   restartPolicy: Never
   tolerations:
   - effect: NoSchedule
@@ -45,13 +47,13 @@ spec:
   - key: CriticalAddonsOnly
     operator: Exists
 `
-	iperfClientPodAntiAffinity = `
+	mysqlTPCCPodAntiAffinity = `
 apiVersion: v1
 kind: Pod
 metadata:
   name: {{ .Name }}
   annotations:
-    capstan-testing: iperf3
+    capstan-testing: mysql-tpcc
     capstan-testingcase: {{ .TestingName }}
   labels:
     component: capstan
@@ -69,12 +71,12 @@ spec:
             -  {{ .WorkloadName }}
         topologyKey: "kubernetes.io/hostname"
   containers:
-  - name: testing-iperf3
+  - name: testing-mysql-tpcc
     image: {{ .Image }}
     imagePullPolicy: Always
     args: [{{ .Args }}]
     env:
-    - name: ENDPOINT
+    - name: MYSQL_HOST
       value: {{ .PodIP }}
   restartPolicy: Never
   tolerations:
@@ -84,13 +86,13 @@ spec:
   - key: CriticalAddonsOnly
     operator: Exists
 `
-	iperfClientPodAffinity = `
+	mysqlTPCCPodAffinity = `
 apiVersion: v1
 kind: Pod
 metadata:
   name: {{ .Name }}
   annotations:
-    capstan-testing: iperf3
+    capstan-testing: mysql-tpcc
     capstan-testingcase: {{ .TestingName }}
   labels:
     component: capstan
@@ -108,12 +110,12 @@ spec:
             -  {{ .WorkloadName }}
         topologyKey: "kubernetes.io/hostname"
   containers:
-  - name: testing-iperf3
+  - name: testing-mysql-tpcc
     image: {{ .Image }}
     imagePullPolicy: Always
     args: [{{ .Args }}]
     env:
-    - name: ENDPOINT
+    - name: MYSQL_HOST
       value: {{ .PodIP }}
   restartPolicy: Never
   tolerations:
