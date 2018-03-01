@@ -186,3 +186,23 @@ func BuildWorkloadPodName(name, testingName string) string {
 func BuildTestingPodName(name, testingName string) string {
 	return strings.ToLower("capstan-" + name + "-" + testingName)
 }
+
+// CreateNamespace creates a namespace.
+func CreateNamespace(kubeClient kubernetes.Interface, namespace string) error {
+	nsSpec := &v1.Namespace{ObjectMeta: apismetav1.ObjectMeta{Name: namespace}}
+	_, err := kubeClient.CoreV1().Namespaces().Create(nsSpec)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to create namespace %v", namespace)
+	}
+
+	return nil
+}
+
+// DeleteNamespace deletes a namespace.
+func DeleteNamespace(kubeClient kubernetes.Interface, namespace string) error {
+	if err := kubeClient.CoreV1().Namespaces().Delete(namespace, apismetav1.NewDeleteOptions(0)); err != nil {
+		return errors.Wrapf(err, "failed to delete namespace %v", namespace)
+	}
+
+	return nil
+}
