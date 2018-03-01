@@ -71,10 +71,11 @@ func (t *TestingTool) Run(kubeClient kubernetes.Interface, testingCase workload.
 
 	// 1. start a workload for the testing case.
 	workloadPodName := workload.BuildWorkloadPodName(t.Workload.GetName(), testingCase.Name)
-	tempWorkloadArgs := struct{ Name, TestingName, Image string }{
+	tempWorkloadArgs := struct{ Name, TestingName, Image, Namespace string }{
 		Name:        workloadPodName,
 		TestingName: testingCase.Name,
 		Image:       t.Workload.GetImage(),
+		Namespace:   types.Namespace,
 	}
 
 	nginxPodBytes, err := workload.ParseTemplate(nginxPod, tempWorkloadArgs)
@@ -98,13 +99,14 @@ func (t *TestingTool) Run(kubeClient kubernetes.Interface, testingCase workload.
 	// 3. start a testing pod for testing the workload.
 	testingPodName := workload.BuildTestingPodName(t.GetName(), testingCase.Name)
 	testingPod, args := t.findTemplate(testingCase.Name)
-	tempTestingArgs := struct{ Name, TestingName, Image, WorkloadName, Args, PodIP string }{
+	tempTestingArgs := struct{ Name, TestingName, Image, WorkloadName, Args, PodIP, Namespace string }{
 		Name:         testingPodName,
 		TestingName:  testingCase.Name,
 		Image:        t.GetImage(),
 		WorkloadName: workloadPodName,
 		Args:         workload.FomatArgs(args),
 		PodIP:        podIP,
+		Namespace:    types.Namespace,
 	}
 
 	testingPodBytes, err := workload.ParseTemplate(testingPod, tempTestingArgs)

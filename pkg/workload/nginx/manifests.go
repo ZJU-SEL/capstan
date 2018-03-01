@@ -28,7 +28,7 @@ metadata:
   labels:
     component: capstan
     testing: {{ .Name }}
-  namespace: capstan
+  namespace: {{ .Namespace }}
 spec:
   containers:
   - name: workload-nginx
@@ -55,7 +55,7 @@ metadata:
   labels:
     component: capstan
     testing: {{ .Name }}
-  namespace: capstan
+  namespace: {{ .Namespace }}
 spec:
   affinity:
     podAntiAffinity:
@@ -94,7 +94,7 @@ metadata:
   labels:
     component: capstan
     testing: {{ .Name }}
-  namespace: capstan
+  namespace: {{ .Namespace }}
 spec:
   affinity:
     podAffinity:

@@ -31,6 +31,8 @@ var (
 	ResultsDir = "/tmp/capstan"
 	// PushgatewayEndpoint is the endpoint of pushGateway.
 	PushgatewayEndpoint string
+	// Namespace is the namespace of capstan.
+	Namespace = "capstan"
 	// UUID is used to mark a run of capstan.
 	UUID string
 )
@@ -41,6 +43,7 @@ type Config struct {
 	ResultsDir string `json:"ResultsDir"`
 	Address    string `json:"Address"`
 	Steps      int    `json:"Steps"`
+	Namespace  string `json:"Namespace"`
 	Prometheus prometheus.Config
 	Workloads  []workload.Workload
 }
@@ -66,6 +69,10 @@ func ReadConfig(filepath string) (Config, error) {
 
 	if config.ResultsDir != "" {
 		ResultsDir = config.ResultsDir
+	}
+
+	if config.Namespace != "" {
+		Namespace = config.Namespace
 	}
 
 	PushgatewayEndpoint = config.Prometheus.PushgatewayEndpoint
