@@ -37,14 +37,19 @@ cd $GOPATH/src/github.com/ZJU-SEL/capstan
 make && make install
 ```
 
-Install Prometheus and Grafana:
+Prepare Kubernetes admin config file:
+
+```sh
+Copy the Kubernetes admin config file to the host path /etc/kubernetes/admin.conf
+```
+
+Deploy capstan:
 
 ```sh
 # install Docker
 apt-get install docker.io -y
-# install Pushgateway
-docker run -d -p 9091:9091 prom/pushgateway
-# install Prometheus
+
+# configure Prometheus
 cat >/tmp/prometheus.yml <<EOF
 global:
   scrape_interval: 15s
@@ -53,63 +58,17 @@ scrape_configs:
   - job_name: 'pushgateway'
     static_configs:
       - targets: ['<Your-HostIP>:9091']
+  - job_name: 'aliyun'
+    static_configs:
+      - targets: ['<Your-Kubernetes in aliyun-MasterIP>:31672','<Your-Kubernetes in aliyun-Node1IP>:31672','<Your-Kubernetes in aliyun-Node2IP>:31672',...]
+  - job_name: 'gcp'
+    static_configs:
+      - targets: ['<Your-Kubernetes in gcp-MasterIP>:31672','<Your-Kubernetes in gcp-Node1IP>:31672','<Your-Kubernetes in gcp-Node2IP>:31672',...]
 EOF
-docker run -d -p 9090:9090 -v /tmp/prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus
-# install Grafana
-mkdir -p /tmp/provisioning/datasources
-cat >/tmp/provisioning/datasources/prometheus.yaml <<EOF
-apiVersion: 1
-datasources:
-  - name: prometheus
-    type: prometheus
-    access: proxy
-    url: http://<Your-HostIP>:9090
-    basicAuth: false
-    editable: true
-EOF
-docker run -d -p 3000:3000 -v /tmp/provisioning/datasources:/etc/grafana/provisioning/datasources grafana/grafana
-```
 
-Prepare Kubernetes admin config file:
+# deploy
+sh $GOPATH/src/github.com/ZJU-SEL/capstan/deploy/deploy.sh
 
-```sh
-Copy the Kubernetes admin config file to the host path /etc/kubernetes/admin.conf
-```
-
-Configure capstan:
-
-```sh
-cat >/etc/capstan/config <<EOF
-{
-    "ResultsDir": "/tmp/capstan",
-    "Prometheus": {
-        "PushgatewayEndpoint": "http://<Your-HostIP>:9091"
-    },
-    "Steps": 10,
-    "Workloads": [
-        {
-            "name": "nginx",
-            "image": "nginx:1.7.9",
-            "frequency": 5,
-            "testingTool": {
-                "name": "wrk",
-                "image": "wadelee/wrk",
-                "steps": 10,
-                "testingCaseSet": [
-                    {
-                        "name": "benchmarkPodIPDiffNode",
-                        "testingToolArgs": "-t10 -c100 -d90 http://\$(ENDPOINT)/"
-                    },
-                    {
-                        "name": "benchmarkPodIPSameNode",
-                        "testingToolArgs": "-t10 -c100 -d90 http://\$(ENDPOINT)/"
-                    }
-                ]
-            }
-        }
-    ]
-}
-EOF
 ```
 
 Start capstan:
