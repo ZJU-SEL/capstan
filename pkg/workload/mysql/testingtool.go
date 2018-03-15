@@ -179,6 +179,7 @@ func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 				"mysql",
 				map[string]string{
 					"uid":          types.UUID,
+					"provider":     types.Provider,
 					"startTime":    t.StartTime.Format("2006-01-02 15:04:05"),
 					"endTime":      time.Now().Format("2006-01-02 15:04:05"),
 					"workloadNode": t.WorkloadNode,

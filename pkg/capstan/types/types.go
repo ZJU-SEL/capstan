@@ -29,6 +29,8 @@ import (
 var (
 	// ResultsDir is the directory of testing results.
 	ResultsDir = "/tmp/capstan"
+	// Provider is the instance provider
+	Provider string
 	// PushgatewayEndpoint is the endpoint of pushGateway.
 	PushgatewayEndpoint string
 	// Namespace is the namespace of capstan.
@@ -41,6 +43,7 @@ var (
 type Config struct {
 	UUID       string `json:"UUID"`
 	ResultsDir string `json:"ResultsDir"`
+	Provider   string `json:"Provider"`
 	Address    string `json:"Address"`
 	Steps      int    `json:"Steps"`
 	Namespace  string `json:"Namespace"`
@@ -70,6 +73,8 @@ func ReadConfig(filepath string) (Config, error) {
 	if config.ResultsDir != "" {
 		ResultsDir = config.ResultsDir
 	}
+
+	Provider = config.Provider
 
 	if config.Namespace != "" {
 		Namespace = config.Namespace
