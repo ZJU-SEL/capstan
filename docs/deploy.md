@@ -84,6 +84,56 @@ systemctl start docker
 docker run -d -p 9091:9091 prom/pushgateway
 ```
 
+### Install Node-exporter
+
+```sh
+Install Node-exporter inside your kubernetes.
+
+cat >/tmp/node-exporter.yaml <<EOF
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  labels:
+    k8s-app: node-exporter
+  namespace: exporter
+spec:
+  template:
+    metadata:
+      labels:
+        k8s-app: node-exporter
+    spec:
+      containers:
+      - image: prom/node-exporter
+        name: node-exporter
+        ports:
+        - containerPort: 9100
+          protocol: TCP
+          name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    k8s-app: node-exporter
+  name: node-exporter
+  namespace: exporter
+spec:
+  ports:
+  - name: http
+    port: 9100
+    nodePort: 31672
+    protocol: TCP
+  type: NodePort
+  selector:
+    k8s-app: node-exporter
+EOF
+
+kubectl create namespace exporter
+
+kubectl create -f /tmp/node-exporter.yaml
+```
+
 ### Install Prometheus
 
 Configure Prometheus:
@@ -96,7 +146,10 @@ global:
 scrape_configs:
   - job_name: 'pushgateway'
     static_configs:
-      - targets: ['127.0.0.1:9091']
+      - targets: ['<Your-HostIP>:9091']
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['<Your-Kubernetes-MasterIP>:31672','<Your-Kubernetes-Node1IP>:31672','<Your-Kubernetes-Node2IP>:31672',...]
 EOF
 ```
 
@@ -110,6 +163,7 @@ docker run -d -p 9090:9090 -v /tmp/prometheus.yml:/etc/prometheus/prometheus.yml
 
 ```sh
 mkdir -p /tmp/provisioning/datasources
+
 cat >/tmp/provisioning/datasources/prometheus.yaml <<EOF
 apiVersion: 1
 datasources:
@@ -120,7 +174,12 @@ datasources:
     basicAuth: false
     editable: true
 EOF
-docker run -d -p 3000:3000 -v /tmp/provisioning/datasources:/etc/grafana/provisioning/datasources grafana/grafana
+
+mkdir /tmp/provisioning/dashboards
+
+cp -r $GOPATH/src/github.com/ZJU-SEL/capstan/grafana-dashboards/* /tmp/provisioning/dashboards/
+
+docker run -d -p 3000:3000 -v /tmp/provisioning:/etc/grafana/provisioning grafana/grafana
 ```
 
 ### Install capstan
@@ -140,10 +199,12 @@ Configure capstan:
 cat >/etc/capstan/config <<EOF
 {
     "ResultsDir": "/tmp/capstan",
+    "Provider": "aliyun",
     "Prometheus": {
-        "PushgatewayEndpoint": "http://127.0.0.1:9091"
+        "PushgatewayEndpoint": "http://<Your-HostIP>:9091"
     },
     "Steps": 10,
+    "Namespace": "capstan",
     "Workloads": [
         {
             "name": "nginx",
