@@ -23,9 +23,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const (
-	// DefaultNamespace is the default namespace for capstan.
-	DefaultNamespace = "capstan"
+var (
+	// Namespace is the namespace of Kubernetes where capstan creates resources.
+	Namespace = "capstan"
 )
 
 // Interface should be implemented by a specific workload.
@@ -34,10 +34,6 @@ type Interface interface {
 	Run(kubeClient kubernetes.Interface) error
 	// TestingTool returns the workload‘s Tool interface.
 	TestingTool() (Tool, error)
-	// GetName returns the name of this workload.
-	GetName() string
-	// GetImage returns the image name of this workload.
-	GetImage() string
 }
 
 // Tool should be implemented by a testing tool.
@@ -62,8 +58,16 @@ type Tool interface {
 type Workload struct {
 	Name        string `json:"name"`
 	Image       string `json:"image"`
-	Frequency   int    `json:"frequency"`
+	Helm        Helm
+	Frequency   int `json:"frequency"`
 	TestingTool TestingTool
+}
+
+// Helm is the internal representation of helm.
+type Helm struct {
+	Name  string `json:"name"`
+	Set   string `json:"set"`
+	Chart string `json:"Chart"`
 }
 
 // TestingTool is the internal representation of a testing tool.
@@ -77,7 +81,6 @@ type TestingTool struct {
 // TestingCase is the internal representation of a testing case.
 type TestingCase struct {
 	Name            string `json:"name"`
-	WorkloadArgs    string `json:"workloadArgs"`
 	TestingToolArgs string `json:"testingToolArgs"`
 }
 

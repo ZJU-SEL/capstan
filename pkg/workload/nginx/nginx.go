@@ -37,13 +37,13 @@ type Workload struct {
 var _ workload.Interface = &Workload{}
 
 // NewWorkload creates a new nginx workload from the given workload definition.
-func NewWorkload(wl workload.Workload) *Workload {
+func NewWorkload(wl workload.Workload) (*Workload, error) {
 	return &Workload{
 		workload:  wl,
 		Name:      wl.Name,
 		Image:     wl.Image,
 		Frequency: wl.Frequency,
-	}
+	}, nil
 }
 
 // Run runs a nginx workload (to adhere to workload.Interface).
@@ -57,10 +57,10 @@ func (w *Workload) Run(kubeClient kubernetes.Interface) error {
 	for i := 1; i <= w.Frequency; i++ {
 		for _, testingCase := range testingTool.GetTestingCaseSet() {
 			// running a testing case.
-			glog.V(1).Infof("Repeat %d: Running the testing case %q of %s", i, testingCase.Name, w.GetName())
+			glog.V(1).Infof("Repeat %d: Running the testing case %q of %s", i, testingCase.Name, w.Name)
 			err := testingTool.Run(kubeClient, testingCase)
 			if err != nil {
-				return errors.Wrapf(err, "Failed to create the resouces belong to testing case %q of %s", testingCase.Name, w.GetName())
+				return errors.Wrapf(err, "Failed to create the resouces belong to testing case %q of %s", testingCase.Name, w.Name)
 			}
 
 			// get the testing results of the testing case.
@@ -103,14 +103,4 @@ func (w *Workload) TestingTool() (workload.Tool, error) {
 		Steps:          time.Duration(w.workload.TestingTool.Steps) * time.Second,
 		TestingCaseSet: w.workload.TestingTool.TestingCaseSet,
 	}, nil
-}
-
-// GetName returns the name of this nginx workload (to adhere to workload.Interface).
-func (w *Workload) GetName() string {
-	return w.Name
-}
-
-// GetImage returns the image name of this nginx workload (to adhere to workload.Interface).
-func (w *Workload) GetImage() string {
-	return w.Image
 }
