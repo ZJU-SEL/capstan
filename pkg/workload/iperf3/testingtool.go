@@ -70,11 +70,12 @@ func (t *TestingTool) Run(kubeClient kubernetes.Interface, testingCase workload.
 	t.StartTime = time.Now()
 
 	// 1. start a workload for the testing case.
-	workloadPodName := workload.BuildWorkloadPodName(t.Workload.GetName()+"-server", testingCase.Name)
-	tempWorkloadArgs := struct{ Name, TestingName, Image string }{
+	workloadPodName := workload.BuildWorkloadPodName(t.Workload.Name+"-server", testingCase.Name)
+	tempWorkloadArgs := struct{ Name, TestingName, Image, Namespace string }{
 		Name:        workloadPodName,
 		TestingName: testingCase.Name,
-		Image:       t.Workload.GetImage(),
+		Image:       t.Workload.Image,
+		Namespace:   workload.Namespace,
 	}
 
 	iperfServerPodBytes, err := workload.ParseTemplate(iperfServerPod, tempWorkloadArgs)
@@ -84,22 +85,23 @@ func (t *TestingTool) Run(kubeClient kubernetes.Interface, testingCase workload.
 
 	glog.V(4).Infof("Creating workload %q of testing case %s", workloadPodName, testingCase.Name)
 	if err := workload.CreatePod(kubeClient, iperfServerPodBytes); err != nil {
-		return errors.Wrapf(err, "unable to create the %s workload for testing case %s", t.Workload.GetName(), testingCase.Name)
+		return errors.Wrapf(err, "unable to create the %s workload for testing case %s", t.Workload.Name, testingCase.Name)
 	}
 
 	// 2. get the podIP and hostIP of the workload until workload is running.
 	glog.V(4).Infof("Geting the podIP and hostIP of workload %s", workloadPodName)
 	podIP, hostIP, err := workload.GetIPs(kubeClient, workloadPodName)
 	if err != nil {
-		return errors.Wrapf(err, "unable to get podIP and hostIP of pod %s created by the %s workload for testing case %s", workloadPodName, t.Workload.GetName(), testingCase.Name)
+		return errors.Wrapf(err, "unable to get podIP and hostIP of pod %s created by the %s workload for testing case %s", workloadPodName, t.Workload.Name, testingCase.Name)
 	}
 	t.WorkloadNode = hostIP
 
 	// 3. start a testing pod for testing the workload.
 	testingPodName := workload.BuildTestingPodName(t.GetName()+"-client", testingCase.Name)
 	testingPod, args := t.findTemplate(testingCase.Name)
-	tempTestingArgs := struct{ Name, TestingName, Image, WorkloadName, Args, PodIP string }{
+	tempTestingArgs := struct{ Name, Namespace, TestingName, Image, WorkloadName, Args, PodIP string }{
 		Name:         testingPodName,
+		Namespace:    workload.Namespace,
 		TestingName:  testingCase.Name,
 		Image:        t.GetImage(),
 		WorkloadName: workloadPodName,
@@ -129,7 +131,7 @@ func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 		time.Sleep(30 * time.Second)
 
 		// Make sure there's a pod.
-		pod, err := kubeClient.CoreV1().Pods(workload.DefaultNamespace).Get(name, apismetav1.GetOptions{})
+		pod, err := kubeClient.CoreV1().Pods(workload.Namespace).Get(name, apismetav1.GetOptions{})
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -140,7 +142,7 @@ func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 		}
 
 		// Check testing has done.
-		body, err := kubeClient.CoreV1().Pods(workload.DefaultNamespace).GetLogs(
+		body, err := kubeClient.CoreV1().Pods(workload.Namespace).GetLogs(
 			name,
 			&v1.PodLogOptions{},
 		).Do().Raw()
@@ -154,7 +156,7 @@ func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 			glog.V(4).Infof("Testing case %s has done", t.CurrentTesting.Name)
 
 			// export to capstan result directory.
-			outdir := path.Join(types.ResultsDir, types.UUID, "workloads", t.Workload.GetName(), t.GetName(), t.CurrentTesting.Name)
+			outdir := path.Join(types.ResultsDir, types.UUID, "workloads", t.Workload.Name, t.GetName(), t.CurrentTesting.Name)
 			if err = os.MkdirAll(outdir, 0755); err != nil {
 				return errors.WithStack(err)
 			}
@@ -184,7 +186,7 @@ func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 					"endTime":      time.Now().Format("2006-01-02 15:04:05"),
 					"workloadNode": t.WorkloadNode,
 					"testingNode":  pod.Status.HostIP,
-					"workloadName": t.Workload.GetName(),
+					"workloadName": t.Workload.Name,
 					"testingName":  t.GetName(),
 					"testingCase":  t.CurrentTesting.Name,
 				},
@@ -204,7 +206,7 @@ func (t *TestingTool) Cleanup(kubeClient kubernetes.Interface) error {
 	if err := workload.DeletePod(kubeClient, workload.BuildTestingPodName(t.GetName()+"-client", t.CurrentTesting.Name)); err != nil {
 		return err
 	}
-	if err := workload.DeletePod(kubeClient, workload.BuildWorkloadPodName(t.Workload.GetName()+"-server", t.CurrentTesting.Name)); err != nil {
+	if err := workload.DeletePod(kubeClient, workload.BuildWorkloadPodName(t.Workload.Name+"-server", t.CurrentTesting.Name)); err != nil {
 		return err
 	}
 	return nil

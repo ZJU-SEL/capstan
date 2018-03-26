@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apismetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,7 +56,7 @@ func CreatePod(kubeClient kubernetes.Interface, podBytes []byte) error {
 		return errors.Wrap(err, "unable to decode pod")
 	}
 
-	_, err := kubeClient.CoreV1().Pods(DefaultNamespace).Create(pod)
+	_, err := kubeClient.CoreV1().Pods(Namespace).Create(pod)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -65,12 +66,12 @@ func CreatePod(kubeClient kubernetes.Interface, podBytes []byte) error {
 
 // DeletePod deletes a pod with the name.
 func DeletePod(kubeClient kubernetes.Interface, name string) error {
-	if err := kubeClient.CoreV1().Pods(DefaultNamespace).Delete(name, apismetav1.NewDeleteOptions(0)); err != nil {
+	if err := kubeClient.CoreV1().Pods(Namespace).Delete(name, apismetav1.NewDeleteOptions(0)); err != nil {
 		return errors.Wrapf(err, "failed to delete pod %v", name)
 	}
 
 	err := wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
-		_, err := kubeClient.CoreV1().Pods(DefaultNamespace).Get(name, apismetav1.GetOptions{})
+		_, err := kubeClient.CoreV1().Pods(Namespace).Get(name, apismetav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return true, nil
@@ -128,7 +129,7 @@ func GetIPs(kubeClient kubernetes.Interface, name string) (string, string, error
 		time.Sleep(10 * time.Second)
 
 		// Make sure there's a pod.
-		pod, err := kubeClient.CoreV1().Pods(DefaultNamespace).Get(name, apismetav1.GetOptions{})
+		pod, err := kubeClient.CoreV1().Pods(Namespace).Get(name, apismetav1.GetOptions{})
 		if err != nil {
 			return "", "", errors.WithStack(err)
 		}
@@ -145,6 +146,60 @@ func GetIPs(kubeClient kubernetes.Interface, name string) (string, string, error
 		// return an error, if has not get the pod ip for 60 seconds.
 		if n > 5 {
 			return "", "", errors.Errorf("long time to get pod %s ip", name)
+		}
+		n++
+	}
+}
+
+// GetVIP gets the service ip.
+func GetVIP(kubeClient kubernetes.Interface, name string) error {
+	n := 0
+	for {
+		// Sleep between each poll, which should give the workload enough time to create
+		// TODO(mozhuli): Use a watcher instead of polling.
+		time.Sleep(10 * time.Second)
+
+		// Make sure there's a deployment.
+		deployment, err := kubeClient.AppsV1().Deployments(Namespace).Get(name, apismetav1.GetOptions{})
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		// Make sure the deployment is available.
+		if deployment.Status.Conditions[0].Type == appsv1.DeploymentAvailable {
+			return nil
+		}
+
+		// return an error, if deployment not available for 60 seconds.
+		if n > 5 {
+			return errors.Errorf("deployment %q not available for 60 seconds", name)
+		}
+		n++
+	}
+}
+
+// CheckDeployment check the deployment created by a workload available or not.
+func CheckDeployment(kubeClient kubernetes.Interface, name string) error {
+	n := 0
+	for {
+		// Sleep between each poll, which should give the workload enough time to create
+		// TODO(mozhuli): Use a watcher instead of polling.
+		time.Sleep(10 * time.Second)
+
+		// Make sure there's a deployment.
+		deployment, err := kubeClient.AppsV1().Deployments(Namespace).Get(name, apismetav1.GetOptions{})
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		// Make sure the deployment is available.
+		if deployment.Status.Conditions[0].Type == appsv1.DeploymentAvailable {
+			return nil
+		}
+
+		// return an error, if deployment not available for 60 seconds.
+		if n > 5 {
+			return errors.Errorf("deployment %q not available for 60 seconds", name)
 		}
 		n++
 	}

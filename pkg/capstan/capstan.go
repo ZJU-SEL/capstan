@@ -53,15 +53,15 @@ func Run(kubeClient kubernetes.Interface, capstanConfig string) error {
 	}
 
 	// 2. Load all workloads
-	err = workload.CreateNamespace(kubeClient, types.Namespace)
+	err = workload.CreateNamespace(kubeClient, workload.Namespace)
 	if err != nil {
 		return err
 	}
 
 	defer func() {
-		err := workload.DeleteNamespace(kubeClient, types.Namespace)
+		err := workload.DeleteNamespace(kubeClient, workload.Namespace)
 		if err != nil {
-			glog.Warningf("Failed delete namespace %v: %v", types.Namespace, err)
+			glog.Warningf("Failed delete namespace %v: %v", workload.Namespace, err)
 		}
 	}()
 

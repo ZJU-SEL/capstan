@@ -51,11 +51,11 @@ func loadWorkload(wl workload.Workload) (workload.Interface, error) {
 	glog.V(1).Infof("Load a testing workload with config:%v", wl)
 	switch wl.Name {
 	case "nginx":
-		return nginx.NewWorkload(wl), nil
+		return nginx.NewWorkload(wl)
 	case "iperf3":
-		return iperf3.NewWorkload(wl), nil
+		return iperf3.NewWorkload(wl)
 	case "mysql":
-		return mysql.NewWorkload(wl), nil
+		return mysql.NewWorkload(wl)
 	default:
 		return nil, errors.Errorf("unknown workload %v", wl.Name)
 	}

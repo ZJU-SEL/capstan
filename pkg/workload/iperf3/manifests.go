@@ -28,7 +28,7 @@ metadata:
   labels:
     component: capstan
     testing: {{ .Name }}
-  namespace: capstan
+  namespace: {{ .Namespace }}
 spec:
   containers:
   - name: workload-iperf3
@@ -56,7 +56,7 @@ metadata:
   labels:
     component: capstan
     testing: {{ .Name }}
-  namespace: capstan
+  namespace: {{ .Namespace }}
 spec:
   affinity:
     podAntiAffinity:
@@ -95,7 +95,7 @@ metadata:
   labels:
     component: capstan
     testing: {{ .Name }}
-  namespace: capstan
+  namespace: {{ .Namespace }}
 spec:
   affinity:
     podAffinity:
