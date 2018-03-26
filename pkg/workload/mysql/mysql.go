@@ -29,7 +29,7 @@ import (
 type Workload struct {
 	workload  workload.Workload
 	Name      string
-	Image     string
+	Helm      workload.Helm
 	Frequency int
 }
 
@@ -37,13 +37,17 @@ type Workload struct {
 var _ workload.Interface = &Workload{}
 
 // NewWorkload creates a new mysql workload from the given workload definition.
-func NewWorkload(wl workload.Workload) *Workload {
+func NewWorkload(wl workload.Workload) (*Workload, error) {
+	// TODO(mozhuli): we only support helm for mysql workload for now.
+	if wl.Helm.Name == "" && wl.Helm.Set == "" && wl.Helm.Chart == "" {
+		return nil, errors.Errorf("The helm section of mysql workload must be not null, but get: %v", wl.Helm)
+	}
 	return &Workload{
 		workload:  wl,
 		Name:      wl.Name,
-		Image:     wl.Image,
+		Helm:      wl.Helm,
 		Frequency: wl.Frequency,
-	}
+	}, nil
 }
 
 // Run runs a mysql workload (to adhere to workload.Interface).
@@ -57,16 +61,17 @@ func (w *Workload) Run(kubeClient kubernetes.Interface) error {
 	for i := 1; i <= w.Frequency; i++ {
 		for _, testingCase := range testingTool.GetTestingCaseSet() {
 			// running a testing case.
-			glog.V(1).Infof("Repeat %d: Running the testing case %q of %s", i, testingCase.Name, w.GetName())
+			glog.V(1).Infof("Repeat %d: Running the testing case %q of %s", i, testingCase.Name, w.Name)
 			err := testingTool.Run(kubeClient, testingCase)
 			if err != nil {
-				return errors.Wrapf(err, "Failed to create the resouces belong to testing case %q of %s", testingCase.Name, w.GetName())
+				return errors.Wrapf(err, "Failed to create the resouces belong to testing case %q of %s", testingCase.Name, w.Name)
 			}
 
 			// get the testing results of the testing case.
 			glog.V(4).Infof("Repeat %d: Starting fetch the testing results of the testing case %q", i, testingCase.Name)
 			err = testingTool.GetTestingResults(kubeClient)
 			if err != nil {
+				_ = testingTool.Cleanup(kubeClient)
 				return errors.Wrapf(err, "Failed to gets the testing results of the testing case %s", testingCase.Name)
 			}
 
@@ -102,14 +107,4 @@ func (w *Workload) TestingTool() (workload.Tool, error) {
 		Steps:          time.Duration(w.workload.TestingTool.Steps) * time.Second,
 		TestingCaseSet: w.workload.TestingTool.TestingCaseSet,
 	}, nil
-}
-
-// GetName returns the name of this mysql workload (to adhere to workload.Interface).
-func (w *Workload) GetName() string {
-	return w.Name
-}
-
-// GetImage returns the image name of this mysql workload (to adhere to workload.Interface).
-func (w *Workload) GetImage() string {
-	return w.Image
 }

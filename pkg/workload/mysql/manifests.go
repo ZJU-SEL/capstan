@@ -17,36 +17,6 @@ limitations under the License.
 package mysql
 
 const (
-	mysqlPod = `
-apiVersion: v1
-kind: Pod
-metadata:
-  name: {{ .Name }}
-  annotations:
-    capstan-workload: mysql
-    capstan-testingcase: {{ .TestingName }}
-  labels:
-    component: capstan
-    testing: {{ .Name }}
-  namespace: capstan
-spec:
-  containers:
-  - name: workload-mysql
-    image: {{ .Image }}
-    imagePullPolicy: Always
-    ports:
-    - containerPort: 3306
-    env:
-    - name: MYSQL_ALLOW_EMPTY_PASSWORD
-      value: "yes"
-  restartPolicy: Never
-  tolerations:
-  - effect: NoSchedule
-    key: node-role.kubernetes.io/master
-    operator: Exists
-  - key: CriticalAddonsOnly
-    operator: Exists
-`
 	mysqlTPCCPodAntiAffinity = `
 apiVersion: v1
 kind: Pod
@@ -58,17 +28,17 @@ metadata:
   labels:
     component: capstan
     testing: {{ .Name }}
-  namespace: capstan
+  namespace: {{ .Namespace }}
 spec:
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
       - labelSelector:
           matchExpressions:
-          - key: testing
+          - key: app
             operator: In
             values:
-            -  {{ .WorkloadName }}
+            -  {{ .Label }}
         topologyKey: "kubernetes.io/hostname"
   containers:
   - name: testing-mysql-tpcc
@@ -77,7 +47,9 @@ spec:
     args: [{{ .Args }}]
     env:
     - name: MYSQL_HOST
-      value: {{ .PodIP }}
+      value: {{ .DNSName }}
+    - name: MYSQL_ROOT_PASSWORD
+      value: {{ .PASSWORD }}
   restartPolicy: Never
   tolerations:
   - effect: NoSchedule
@@ -97,17 +69,17 @@ metadata:
   labels:
     component: capstan
     testing: {{ .Name }}
-  namespace: capstan
+  namespace: {{ .Namespace }}
 spec:
   affinity:
     podAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
       - labelSelector:
           matchExpressions:
-          - key: testing
+          - key: app
             operator: In
             values:
-            -  {{ .WorkloadName }}
+            -  {{ .Label }}
         topologyKey: "kubernetes.io/hostname"
   containers:
   - name: testing-mysql-tpcc
@@ -116,7 +88,9 @@ spec:
     args: [{{ .Args }}]
     env:
     - name: MYSQL_HOST
-      value: {{ .PodIP }}
+      value: {{ .DNSName }}
+    - name: MYSQL_ROOT_PASSWORD
+      value: {{ .PASSWORD }}
   restartPolicy: Never
   tolerations:
   - effect: NoSchedule

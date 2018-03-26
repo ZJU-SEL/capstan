@@ -13,7 +13,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Configration
+MYSQL=/usr/bin/mysql
+TPCCLOAD=./tpcc_load
+TPCCSTART=./tpcc_start
+TABLESQL=./create_table.sql
+CONSTRAINTSQL=./add_fkey_idx.sql
 
-tpcc_load -h$(MYSQL_HOST) -P3306 -d tpcc -u root -p "" $1 \
-&& tpcc_start -h$(MYSQL_HOST) -P3306 -d tpcc -u root -p "" $* \
-&& echo "Capstan Testing Done"
+DATABASE=tpcc
+USER=root
+
+# Load data
+echo 'Load data ...'
+echo MYSQL_HOST=$MYSQL_HOST
+echo MYSQL_PASSWORD=$MYSQL_ROOT_PASSWORD
+
+$MYSQL -h $MYSQL_HOST -P3306 -u $USER -p$MYSQL_ROOT_PASSWORD -e "DROP DATABASE IF EXISTS $DATABASE"
+$MYSQL -h $MYSQL_HOST -P3306 -u $USER -p$MYSQL_ROOT_PASSWORD -e "CREATE DATABASE $DATABASE"
+$MYSQL -h $MYSQL_HOST -P3306 -u $USER -p$MYSQL_ROOT_PASSWORD $DATABASE < $TABLESQL
+$MYSQL -h $MYSQL_HOST -P3306 -u $USER -p$MYSQL_ROOT_PASSWORD $DATABASE < $CONSTRAINTSQL
+
+# Populate data
+echo 'Populate data ...'
+echo warehouses=$1
+$TPCCLOAD -h$MYSQL_HOST -P3306 -d $DATABASE -u $USER -p$MYSQL_ROOT_PASSWORD $1
+
+# Start benchmark
+echo 'Start TPCC benchmark ...'
+$TPCCSTART -h$MYSQL_HOST -P3306 -d $DATABASE -u $USER -p$MYSQL_ROOT_PASSWORD $*
+
+echo "Capstan Testing Done"
+

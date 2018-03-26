@@ -20,7 +20,8 @@ RUN apt-get update && apt-get install -y --force-yes --no-install-recommends \
     build-essential \
     ca-certificates \
     libmysql++-dev \
-    git
+    git \
+    mysql-client
 
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 

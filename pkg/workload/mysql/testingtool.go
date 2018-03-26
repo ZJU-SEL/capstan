@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/ZJU-SEL/capstan/pkg/capstan/types"
+	"github.com/ZJU-SEL/capstan/pkg/util"
 	"github.com/ZJU-SEL/capstan/pkg/workload"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
@@ -56,7 +57,6 @@ type TestingTool struct {
 	Image          string
 	Steps          time.Duration
 	StartTime      time.Time
-	WorkloadNode   string
 	CurrentTesting workload.TestingCase
 	TestingCaseSet []workload.TestingCase
 }
@@ -70,41 +70,34 @@ func (t *TestingTool) Run(kubeClient kubernetes.Interface, testingCase workload.
 	t.StartTime = time.Now()
 
 	// 1. start a workload for the testing case.
-	workloadPodName := workload.BuildWorkloadPodName(t.Workload.GetName(), testingCase.Name)
-	tempWorkloadArgs := struct{ Name, TestingName, Image string }{
-		Name:        workloadPodName,
-		TestingName: testingCase.Name,
-		Image:       t.Workload.GetImage(),
-	}
-
-	mysqlServerPodBytes, err := workload.ParseTemplate(mysqlPod, tempWorkloadArgs)
+	ret, err := util.RunCommand("helm", "install", "--name", t.Workload.Helm.Name, "--set", t.Workload.Helm.Set, "--namespace", workload.Namespace, t.Workload.Helm.Chart)
 	if err != nil {
-		return errors.Wrapf(err, "unable to parse %v using %v", mysqlPod, tempWorkloadArgs)
+		return errors.Errorf("helm install failed, ret:%s, error:%v", strings.Join(ret, "\n"), err)
 	}
 
-	glog.V(4).Infof("Creating workload %q of testing case %s", workloadPodName, testingCase.Name)
-	if err := workload.CreatePod(kubeClient, mysqlServerPodBytes); err != nil {
-		return errors.Wrapf(err, "unable to create the %s workload for testing case %s", t.Workload.GetName(), testingCase.Name)
-	}
-
-	// 2. get the podIP and hostIP of the workload until workload is running.
-	glog.V(4).Infof("Geting the podIP and hostIP of workload %s", workloadPodName)
-	podIP, hostIP, err := workload.GetIPs(kubeClient, workloadPodName)
+	// 2. check the deployment of the workload is available.
+	glog.V(4).Infof("Check the deployment of %s workload is available or not", t.Workload.Name)
+	err = workload.CheckDeployment(kubeClient, t.Workload.Helm.Name+"-mysql")
 	if err != nil {
-		return errors.Wrapf(err, "unable to get podIP and hostIP of pod %s created by the %s workload for testing case %s", workloadPodName, t.Workload.GetName(), testingCase.Name)
+		return errors.Wrapf(err, "unable to check the deployment of %s workload is available or not for testing case %s", t.Workload.Name, testingCase.Name)
 	}
-	t.WorkloadNode = hostIP
 
 	// 3. start a testing pod for testing the workload.
 	testingPodName := workload.BuildTestingPodName(t.GetName(), testingCase.Name)
 	testingPod, args := t.findTemplate(testingCase.Name)
-	tempTestingArgs := struct{ Name, TestingName, Image, WorkloadName, Args, PodIP string }{
-		Name:         testingPodName,
-		TestingName:  testingCase.Name,
-		Image:        t.GetImage(),
-		WorkloadName: workloadPodName,
-		Args:         workload.FomatArgs(args),
-		PodIP:        podIP,
+	password, err := getMysqlRootPassword(t.Workload.Helm.Set)
+	if err != nil {
+		return err
+	}
+	tempTestingArgs := struct{ Name, Namespace, TestingName, Image, Label, Args, DNSName, PASSWORD string }{
+		Name:        testingPodName,
+		Namespace:   workload.Namespace,
+		TestingName: testingCase.Name,
+		Image:       t.GetImage(),
+		Label:       t.Workload.Helm.Name + "-mysql",
+		Args:        workload.FomatArgs(args),
+		DNSName:     t.Workload.Helm.Name + "-mysql",
+		PASSWORD:    password,
 	}
 
 	testingPodBytes, err := workload.ParseTemplate(testingPod, tempTestingArgs)
@@ -129,7 +122,7 @@ func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 		time.Sleep(30 * time.Second)
 
 		// Make sure there's a pod.
-		pod, err := kubeClient.CoreV1().Pods(workload.DefaultNamespace).Get(name, apismetav1.GetOptions{})
+		pod, err := kubeClient.CoreV1().Pods(workload.Namespace).Get(name, apismetav1.GetOptions{})
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -140,7 +133,7 @@ func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 		}
 
 		// Check testing has done.
-		body, err := kubeClient.CoreV1().Pods(workload.DefaultNamespace).GetLogs(
+		body, err := kubeClient.CoreV1().Pods(workload.Namespace).GetLogs(
 			name,
 			&v1.PodLogOptions{},
 		).Do().Raw()
@@ -154,7 +147,7 @@ func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 			glog.V(4).Infof("Testing case %s has done", t.CurrentTesting.Name)
 
 			// export to capstan result directory.
-			outdir := path.Join(types.ResultsDir, types.UUID, "workloads", t.Workload.GetName(), t.GetName(), t.CurrentTesting.Name)
+			outdir := path.Join(types.ResultsDir, types.UUID, "workloads", t.Workload.Name, t.GetName(), t.CurrentTesting.Name)
 			if err = os.MkdirAll(outdir, 0755); err != nil {
 				return errors.WithStack(err)
 			}
@@ -182,9 +175,8 @@ func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 					"provider":     types.Provider,
 					"startTime":    t.StartTime.Format("2006-01-02 15:04:05"),
 					"endTime":      time.Now().Format("2006-01-02 15:04:05"),
-					"workloadNode": t.WorkloadNode,
 					"testingNode":  pod.Status.HostIP,
-					"workloadName": t.Workload.GetName(),
+					"workloadName": t.Workload.Name,
 					"testingName":  t.GetName(),
 					"testingCase":  t.CurrentTesting.Name,
 				},
@@ -201,11 +193,14 @@ func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 
 // Cleanup cleans up all resources created by a testing case for mysql testing tool (to adhere to workload.Tool interface).
 func (t *TestingTool) Cleanup(kubeClient kubernetes.Interface) error {
+	// Delete testing pod.
 	if err := workload.DeletePod(kubeClient, workload.BuildTestingPodName(t.GetName(), t.CurrentTesting.Name)); err != nil {
 		return err
 	}
-	if err := workload.DeletePod(kubeClient, workload.BuildWorkloadPodName(t.Workload.GetName(), t.CurrentTesting.Name)); err != nil {
-		return err
+	// Delete the release of the workload
+	ret, err := util.RunCommand("helm", "delete", "--purge", t.Workload.Helm.Name)
+	if err != nil {
+		return errors.Errorf("helm install failed, ret:%s, error:%v", strings.Join(ret, "\n"), err)
 	}
 	return nil
 }
@@ -254,4 +249,16 @@ func getTPMC(data []byte) (float64, error) {
 		}
 	}
 	return 0, errors.Errorf("results not contain TpmC")
+}
+
+func getMysqlRootPassword(set string) (string, error) {
+	if !strings.Contains(set, "mysqlRootPassword") {
+		return "", errors.Errorf("helm'set section should contain %q", "mysqlRootPassword")
+	}
+	for _, option := range strings.Split(set, ",") {
+		if strings.Contains(option, "mysqlRootPassword") {
+			return strings.Split(option, "=")[1], nil
+		}
+	}
+	return "", errors.Errorf("helm'set section should contain %q", "mysqlRootPassword")
 }

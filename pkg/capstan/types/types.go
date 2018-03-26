@@ -33,8 +33,6 @@ var (
 	Provider string
 	// PushgatewayEndpoint is the endpoint of pushGateway.
 	PushgatewayEndpoint string
-	// Namespace is the namespace of capstan.
-	Namespace = "capstan"
 	// UUID is used to mark a run of capstan.
 	UUID string
 )
@@ -77,7 +75,7 @@ func ReadConfig(filepath string) (Config, error) {
 	Provider = config.Provider
 
 	if config.Namespace != "" {
-		Namespace = config.Namespace
+		workload.Namespace = config.Namespace
 	}
 
 	PushgatewayEndpoint = config.Prometheus.PushgatewayEndpoint
