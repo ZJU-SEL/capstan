@@ -26,9 +26,38 @@ capstan aims to provide a series of workloads and testing tools for Kubernetes c
 
 - Building a new data collection and analysis tool(e.g. [cadvisor](https://github.com/google/cadvisor),[heapster](https://github.com/kubernetes/heapster)).
 
+## Prerequisites Installation
+
+- Go: 1.9.3+
+- Helm
+
 ## QuickStart
 
-Build capstan:
+In the quickstart, we use the default config to run capstan. You can also specify your own config.
+
+### Prepare Kubernetes admin config file:
+
+```sh
+Copy the Kubernetes admin config file to the host path /etc/kubernetes/admin.conf
+
+export KUBECONFIG=/etc/kubernetes/admin.conf
+```
+
+### Install kubectl:
+```sh
+curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+
+chmod +x ./kubectl
+
+sudo mv ./kubectl /usr/local/bin/kubectl
+```
+
+### Install helm
+
+Here is [helm installtion](https://github.com/kubernetes/helm/blob/master/docs/install.md?spm=a2c4g.11186623.2.7.qwiWKY&file=install.md).
+After installtion, you should `helm init`.
+
+### Build capstan:
 
 ```sh
 mkdir -p $GOPATH/src/github.com/ZJU-SEL
@@ -37,15 +66,14 @@ cd $GOPATH/src/github.com/ZJU-SEL/capstan
 make && make install
 ```
 
-Install Prometheus and Grafana:
+### Deploy capstan:
 
 ```sh
 # install Docker
 apt-get install docker.io -y
-# install Pushgateway
-docker run -d -p 9091:9091 prom/pushgateway
-# install Prometheus
-cat >/tmp/prometheus.yml <<EOF
+
+# configure Prometheus
+cat >/etc/capstan/prometheus/prometheus.yml <<EOF
 global:
   scrape_interval: 15s
   scrape_timeout: 10s
@@ -53,66 +81,20 @@ scrape_configs:
   - job_name: 'pushgateway'
     static_configs:
       - targets: ['<Your-HostIP>:9091']
+  - job_name: 'aliyun'
+    static_configs:
+      - targets: ['<Your-Kubernetes in aliyun-MasterIP>:31672','<Your-Kubernetes in aliyun-Node1IP>:31672','<Your-Kubernetes in aliyun-Node2IP>:31672',...]
+  - job_name: 'gcp'
+    static_configs:
+      - targets: ['<Your-Kubernetes in gcp-MasterIP>:31672','<Your-Kubernetes in gcp-Node1IP>:31672','<Your-Kubernetes in gcp-Node2IP>:31672',...]
 EOF
-docker run -d -p 9090:9090 -v /tmp/prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus
-# install Grafana
-mkdir -p /tmp/provisioning/datasources
-cat >/tmp/provisioning/datasources/prometheus.yaml <<EOF
-apiVersion: 1
-datasources:
-  - name: prometheus
-    type: prometheus
-    access: proxy
-    url: http://<Your-HostIP>:9090
-    basicAuth: false
-    editable: true
-EOF
-docker run -d -p 3000:3000 -v /tmp/provisioning/datasources:/etc/grafana/provisioning/datasources grafana/grafana
+
+# deploy
+sh $GOPATH/src/github.com/ZJU-SEL/capstan/deploy/quickstart.sh
+
 ```
 
-Prepare Kubernetes admin config file:
-
-```sh
-Copy the Kubernetes admin config file to the host path /etc/kubernetes/admin.conf
-```
-
-Configure capstan:
-
-```sh
-cat >/etc/capstan/config <<EOF
-{
-    "ResultsDir": "/tmp/capstan",
-    "Prometheus": {
-        "PushgatewayEndpoint": "http://<Your-HostIP>:9091"
-    },
-    "Steps": 10,
-    "Workloads": [
-        {
-            "name": "nginx",
-            "image": "nginx:1.7.9",
-            "frequency": 5,
-            "testingTool": {
-                "name": "wrk",
-                "image": "wadelee/wrk",
-                "steps": 10,
-                "testingCaseSet": [
-                    {
-                        "name": "benchmarkPodIPDiffNode",
-                        "testingToolArgs": "-t10 -c100 -d90 http://\$(ENDPOINT)/"
-                    },
-                    {
-                        "name": "benchmarkPodIPSameNode",
-                        "testingToolArgs": "-t10 -c100 -d90 http://\$(ENDPOINT)/"
-                    }
-                ]
-            }
-        }
-    ]
-}
-EOF
-```
-
-Start capstan:
+### Start capstan:
 
 ```sh
 capstan --v=3 --logtostderr --config=/etc/capstan/config --kubeconfig=/etc/kubernetes/admin.conf &

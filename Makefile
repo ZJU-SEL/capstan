@@ -53,6 +53,12 @@ clean:
 
 .PHONY: install
 install: depend
+	rm -rf /etc/capstan
+	mkdir -p /etc/capstan/prometheus /etc/capstan/grafana/provisioning
+	mkdir /etc/capstan/grafana/provisioning/datasources /etc/capstan/grafana/provisioning/dashboards
+	cp $(GOPATH)/src/github.com/ZJU-SEL/capstan/grafana-dashboards/* /etc/capstan/grafana/provisioning/dashboards/
+	cp $(GOPATH)/src/github.com/ZJU-SEL/capstan/deploy/grafana-datasources.yaml /etc/capstan/grafana/provisioning/datasources/prometheus.yaml
+	cp $(GOPATH)/src/github.com/ZJU-SEL/capstan/examples/capstan.conf /etc/capstan/config
 	cd $(DEST)
 	install -D -m 755 $(OUTPUT)/capstan /usr/local/bin/capstan
 
