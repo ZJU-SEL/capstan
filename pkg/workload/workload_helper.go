@@ -184,7 +184,7 @@ func CheckDeployment(kubeClient kubernetes.Interface, name string) error {
 	for {
 		// Sleep between each poll, which should give the workload enough time to create
 		// TODO(mozhuli): Use a watcher instead of polling.
-		time.Sleep(10 * time.Second)
+		time.Sleep(20 * time.Second)
 
 		// Make sure there's a deployment.
 		deployment, err := kubeClient.AppsV1().Deployments(Namespace).Get(name, apismetav1.GetOptions{})
