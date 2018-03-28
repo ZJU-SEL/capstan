@@ -100,6 +100,10 @@ sh $GOPATH/src/github.com/ZJU-SEL/capstan/deploy/quickstart.sh
 capstan --v=3 --logtostderr --config=/etc/capstan/config --kubeconfig=/etc/kubernetes/admin.conf &
 ```
 
+### Display
+
+You can visit `<Your-HostIP>:3000` to see Grafana. There is a default user "admin", and its password is "admin". 
+
 ## Documentation
 
 - [Deploying](docs/deploy.md)
