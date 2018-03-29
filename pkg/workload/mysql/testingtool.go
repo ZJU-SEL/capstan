@@ -65,7 +65,7 @@ type TestingTool struct {
 var _ workload.Tool = &TestingTool{}
 
 // Run runs the defined testing case set for mysql testing tool (to adhere to workload.Tool interface).
-func (t *TestingTool) Run(kubeClient kubernetes.Interface, testingCase workload.TestingCase) error {
+func (t *TestingTool) Run(kubeClient kubernetes.Interface, testingCase workload.TestingCase) (err error) {
 	t.CurrentTesting = testingCase
 	t.StartTime = time.Now()
 
@@ -74,6 +74,15 @@ func (t *TestingTool) Run(kubeClient kubernetes.Interface, testingCase workload.
 	if err != nil {
 		return errors.Errorf("helm install failed, ret:%s, error:%v", strings.Join(ret, "\n"), err)
 	}
+	// Delete the release of the workload
+	defer func() {
+		ret, delErr := util.RunCommand("helm", "del", "--purge", t.Workload.Helm.Name)
+		if delErr != nil && err == nil {
+			glog.Warningf("helm delete failed,ret:%s,error:%v", strings.Join(ret, "\n"), delErr)
+			err = delErr
+			return
+		}
+	}()
 
 	// 2. check the deployment of the workload is available.
 	glog.V(4).Infof("Check the deployment of %s workload is available or not", t.Workload.Name)
@@ -110,7 +119,7 @@ func (t *TestingTool) Run(kubeClient kubernetes.Interface, testingCase workload.
 		return errors.Wrapf(err, "unable to create the testing pod for testing case %s", testingCase.Name)
 	}
 
-	return nil
+	return
 }
 
 // GetTestingResults gets the testing results of mysql testing case (to adhere to workload.Tool interface).
@@ -194,15 +203,8 @@ func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 // Cleanup cleans up all resources created by a testing case for mysql testing tool (to adhere to workload.Tool interface).
 func (t *TestingTool) Cleanup(kubeClient kubernetes.Interface) error {
 	// Delete testing pod.
-	if err := workload.DeletePod(kubeClient, workload.BuildTestingPodName(t.GetName(), t.CurrentTesting.Name)); err != nil {
-		return err
-	}
-	// Delete the release of the workload
-	ret, err := util.RunCommand("helm", "delete", "--purge", t.Workload.Helm.Name)
-	if err != nil {
-		return errors.Errorf("helm install failed, ret:%s, error:%v", strings.Join(ret, "\n"), err)
-	}
-	return nil
+	err := workload.DeletePod(kubeClient, workload.BuildTestingPodName(t.GetName(), t.CurrentTesting.Name))
+	return err
 }
 
 // GetName returns the name of mysql testing tool (to adhere to workload.Tool interface).
