@@ -193,14 +193,14 @@ func (t *TestingTool) GetTestingResults(kubeClient kubernetes.Interface) error {
 
 // Cleanup cleans up all resources created by a testing case for mysql testing tool (to adhere to workload.Tool interface).
 func (t *TestingTool) Cleanup(kubeClient kubernetes.Interface) error {
-	// Delete testing pod.
-	if err := workload.DeletePod(kubeClient, workload.BuildTestingPodName(t.GetName(), t.CurrentTesting.Name)); err != nil {
-		return err
-	}
 	// Delete the release of the workload
 	ret, err := util.RunCommand("helm", "delete", "--purge", t.Workload.Helm.Name)
 	if err != nil {
 		return errors.Errorf("helm install failed, ret:%s, error:%v", strings.Join(ret, "\n"), err)
+	}
+	// Delete testing pod.
+	if err := workload.DeletePod(kubeClient, workload.BuildTestingPodName(t.GetName(), t.CurrentTesting.Name)); err != nil {
+		return err
 	}
 	return nil
 }

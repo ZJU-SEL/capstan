@@ -64,6 +64,7 @@ func (w *Workload) Run(kubeClient kubernetes.Interface) error {
 			glog.V(1).Infof("Repeat %d: Running the testing case %q of %s", i, testingCase.Name, w.Name)
 			err := testingTool.Run(kubeClient, testingCase)
 			if err != nil {
+				_ = testingTool.Cleanup(kubeClient)
 				return errors.Wrapf(err, "Failed to create the resouces belong to testing case %q of %s", testingCase.Name, w.Name)
 			}
 
