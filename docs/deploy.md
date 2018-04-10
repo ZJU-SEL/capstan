@@ -3,13 +3,13 @@
 - [Overview](#overview)
 - [Prerequisites](#prerequisites)
 - [Setup Kubernetes cluster](#kubernetes-cluster)
-    - [GKE](#google-kubernetes-engine)
+  - [GKE](#google-kubernetes-engine)
 - [Install packages](#install-packages)
-    - [Install Docker](#install-docker)
-    - [Install Pushgateway](#install-pushgateway)
-    - [Install Prometheus](#install-prometheus)
-    - [Install Grafana](#install-grafana)
-    - [Install capstan](#install-capstan)
+  - [Install Docker](#install-docker)
+  - [Install Pushgateway](#install-pushgateway)
+  - [Install Prometheus](#install-prometheus)
+  - [Install Grafana](#install-grafana)
+  - [Install capstan](#install-capstan)
 
 ## Overview
 
@@ -78,51 +78,6 @@ systemctl enable docker
 systemctl start docker
 ```
 
-### Install Pushgateway
-
-```sh
-docker run -d -p 9091:9091 prom/pushgateway
-```
-
-### Install Prometheus
-
-Configure Prometheus:
-
-```sh
-cat >/tmp/prometheus.yml <<EOF
-global:
-  scrape_interval: 15s
-  scrape_timeout: 10s
-scrape_configs:
-  - job_name: 'pushgateway'
-    static_configs:
-      - targets: ['127.0.0.1:9091']
-EOF
-```
-
-Start Prometheus:
-
-```sh
-docker run -d -p 9090:9090 -v /tmp/prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus
-```
-
-### Install Grafana
-
-```sh
-mkdir -p /tmp/provisioning/datasources
-cat >/tmp/provisioning/datasources/prometheus.yaml <<EOF
-apiVersion: 1
-datasources:
-  - name: prometheus
-    type: prometheus
-    access: proxy
-    url: http://<Your-HostIP>:9090
-    basicAuth: false
-    editable: true
-EOF
-docker run -d -p 3000:3000 -v /tmp/provisioning/datasources:/etc/grafana/provisioning/datasources grafana/grafana
-```
-
 ### Install capstan
 
 Build capstan:
@@ -139,28 +94,95 @@ Configure capstan:
 ```sh
 cat >/etc/capstan/config <<EOF
 {
+    "UUID": "123456",
     "ResultsDir": "/tmp/capstan",
-    "Prometheus": {
-        "PushgatewayEndpoint": "http://127.0.0.1:9091"
-    },
+    "Provider": "aliyun",
+    "Address": "0.0.0.0:8080",
+    "PushgatewayEndpoint": "http://<Your-HostIP>:9091",
     "Steps": 10,
+    "Namespace": "capstan",
     "Workloads": [
         {
             "name": "nginx",
-            "image": "nginx:1.7.9",
+            "helm": {
+                "name": "chart1",
+                "set": "imageTag=1.7.9",
+                "chart": "charts/nginx-0.1.0.tgz"
+            },
             "frequency": 5,
-            "testingTool": {
+            "testTool": {
                 "name": "wrk",
-                "image": "wadelee/wrk",
+                "script": "scripts/wrk.sh",
                 "steps": 10,
-                "testingCaseSet": [
+                "testCaseSet": [
                     {
-                        "name": "benchmarkPodIPDiffNode",
-                        "testingToolArgs": "-t10 -c100 -d90 http://\$(ENDPOINT)/"
+                        "name": "case1",
+                        "affinity": true,
+                        "args": "-t10 -c100 -d30 http://chart1-nginx/",
+                        "metrics": "QPS"
                     },
                     {
-                        "name": "benchmarkPodIPSameNode",
-                        "testingToolArgs": "-t10 -c100 -d90 http://\$(ENDPOINT)/"
+                        "name": "case2",
+                        "affinity": false,
+                        "args": "-t10 -c100 -d30 http://chart1-nginx/",
+                        "metrics": "QPS"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "iperf3",
+            "helm": {
+                "name": "chart2",
+                "chart": "charts/iperf3-0.1.0.tgz"
+            },
+            "frequency": 5,
+            "testTool": {
+                "name": "iperf3",
+                "script": "scripts/iperf3.sh",
+                "steps": 10,
+                "testCaseSet": [
+                    {
+                        "name": "case1",
+                        "affinity": true,
+                        "args": "-c chart2-iperf3",
+                        "metrics": "BandWidth"
+                    },
+                    {
+                        "name": "case2",
+                        "affinity": false,
+                        "args": "-c chart2-iperf3",
+                        "metrics": "BandWidth"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "mysql",
+            "helm": {
+                "name": "chart3",
+                "set": "mysqlRootPassword=capstan,persistence.enabled=false",
+                "chart": "stable/mysql"
+            },
+            "frequency": 5,
+            "testTool": {
+                "name": "tpcc-mysql",
+                "script": "scripts/tpcc-mysql.sh",
+                "steps": 10,
+                "testCaseSet": [
+                    {
+                        "name": "case1",
+                        "affinity": true,
+                        "args": "-w1 -c10 -r60 -l60",
+                        "envs": "MYSQL_HOST=chart3-mysql,MYSQL_ROOT_PASSWORD=capstan",
+                        "metrics": "TPMC"
+                    },
+                    {
+                        "name": "case2",
+                        "affinity": false,
+                        "args": "-w1 -c10 -r60 -l60",
+                        "envs": "MYSQL_HOST=chart3-mysql,MYSQL_ROOT_PASSWORD=capstan",
+                        "metrics": "TPMC"
                     }
                 ]
             }
@@ -170,7 +192,59 @@ cat >/etc/capstan/config <<EOF
 EOF
 ```
 
-Start capstan:
+### Install Pushgateway
+
+```sh
+docker run -d -p 9091:9091 prom/pushgateway
+```
+
+### Install Prometheus
+
+Configure Prometheus:
+
+Now we run the Kubernetes on Aliyun. So here we use Aliyun as example. It is sure that you can also use GCP, AWS, and Azure.
+
+```sh
+cat >/etc/capstan/prometheus/prometheus.yml <<EOF
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+scrape_configs:
+  - job_name: 'pushgateway'
+    static_configs:
+      - targets: ['<Your-HostIP>:9091']
+  - job_name: 'aliyun'
+    static_configs:
+      - targets: ['<Your-Kubernetes in aliyun-MasterIP>:31672','<Your-Kubernetes in aliyun-Node1IP>:31672','<Your-Kubernetes in aliyun-Node2IP>:31672',...]
+EOF
+```
+
+Start node-exporter:
+
+```sh
+kubectl create namespace capstan-exporter
+kubectl create -f $GOPATH/src/github.com/ZJU-SEL/capstan/deploy/node-exporter.yaml
+```
+
+Start Prometheus:
+
+```sh
+docker run -d -p 9090:9090 -v /etc/capstan/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus
+```
+
+### Install Grafana
+
+```sh
+
+IPADDR=$(curl -s http://members.3322.org/dyndns/getip)
+sed -i "s/<Your-HostIP>/${IPADDR}/g" /etc/capstan/grafana/provisioning/datasources/prometheus.yaml /etc/capstan/config
+
+sh $GOPATH/src/github.com/ZJU-SEL/capstan/grafana-dashboards/configDashboard.sh
+
+docker run -d -p 3000:3000 -v /etc/capstan/grafana/provisioning:/etc/grafana/provisioning grafana/grafana
+```
+
+### Start capstan
 
 ```sh
 capstan --v=3 --logtostderr --config=/etc/capstan/config --kubeconfig=/etc/kubernetes/admin.conf &

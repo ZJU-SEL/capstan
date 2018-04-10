@@ -1,0 +1,8 @@
+          ,{
+            "expr": "#PromQL{workloadName=\"#workloadName\",provider=\"aliyun\"}",
+            "format": "table",
+            "hide": false,
+            "instant": true,
+            "intervalFactor": 1,
+            "refId": "#A"
+          }
