@@ -8,7 +8,7 @@
 
 capstan is a benchmarker which contains series of workloads and testing tools for Kubernetes. You can obtain the performance data of each type workload in the specific configuration of Kubernetes cluster offered by different cloud offerings.
 
-## What is the scope of this project?
+## What is the scope of this project
 
 capstan aims to provide a series of workloads and testing tools for Kubernetes cluster:
 
@@ -20,7 +20,7 @@ capstan aims to provide a series of workloads and testing tools for Kubernetes c
 
 - Generate a testing report and performance report.
 
-## What is not in scope for this project?
+## What is not in scope for this project
 
 - Building a new cluster lifecycle management tool(e.g. [kubeadm](https://github.com/kubernetes/kubeadm),[kops](https://github.com/kubernetes/kops),[kubernetes-anywhere](https://github.com/kubernetes/kubernetes-anywhere)).
 
@@ -35,7 +35,7 @@ capstan aims to provide a series of workloads and testing tools for Kubernetes c
 
 In the quickstart, we use the default config to run capstan. You can also specify your own config.
 
-### Prepare Kubernetes admin config file:
+### Prepare Kubernetes admin config file
 
 ```sh
 Copy the Kubernetes admin config file to the host path /etc/kubernetes/admin.conf
@@ -43,7 +43,8 @@ Copy the Kubernetes admin config file to the host path /etc/kubernetes/admin.con
 export KUBECONFIG=/etc/kubernetes/admin.conf
 ```
 
-### Install kubectl:
+### Install kubectl
+
 ```sh
 curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
 
@@ -57,7 +58,7 @@ sudo mv ./kubectl /usr/local/bin/kubectl
 Here is [helm installtion](https://github.com/kubernetes/helm/blob/master/docs/install.md?spm=a2c4g.11186623.2.7.qwiWKY&file=install.md).
 After installtion, you should `helm init`.
 
-### Build capstan:
+### Build capstan
 
 ```sh
 mkdir -p $GOPATH/src/github.com/ZJU-SEL
@@ -66,11 +67,14 @@ cd $GOPATH/src/github.com/ZJU-SEL/capstan
 make && make install
 ```
 
-### Deploy capstan:
+### Deploy capstan
 
 ```sh
 # install Docker
 apt-get install docker.io -y
+
+# install jq. It is used in quickstart.sh
+apt-get install jq
 
 # configure Prometheus
 cat >/etc/capstan/prometheus/prometheus.yml <<EOF
@@ -84,9 +88,6 @@ scrape_configs:
   - job_name: 'aliyun'
     static_configs:
       - targets: ['<Your-Kubernetes in aliyun-MasterIP>:31672','<Your-Kubernetes in aliyun-Node1IP>:31672','<Your-Kubernetes in aliyun-Node2IP>:31672',...]
-  - job_name: 'gcp'
-    static_configs:
-      - targets: ['<Your-Kubernetes in gcp-MasterIP>:31672','<Your-Kubernetes in gcp-Node1IP>:31672','<Your-Kubernetes in gcp-Node2IP>:31672',...]
 EOF
 
 # deploy
@@ -94,7 +95,7 @@ sh $GOPATH/src/github.com/ZJU-SEL/capstan/deploy/quickstart.sh
 
 ```
 
-### Start capstan:
+### Start capstan
 
 ```sh
 capstan --v=3 --logtostderr --config=/etc/capstan/config --kubeconfig=/etc/kubernetes/admin.conf &
@@ -102,7 +103,7 @@ capstan --v=3 --logtostderr --config=/etc/capstan/config --kubeconfig=/etc/kuber
 
 ### Display
 
-You can visit `<Your-HostIP>:3000` to see Grafana. There is a default user "admin", and its password is "admin". 
+You can visit `<Your-HostIP>:3000` to see Grafana. There is a default user "admin", and its password is "admin".
 
 ## Documentation
 
