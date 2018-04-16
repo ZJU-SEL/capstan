@@ -14,20 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mysql
+package helm
 
 const (
-	mysqlTPCCPodAntiAffinity = `
+	// PodAntiAffinity is the manifest for test tool running on the different node with workload.
+	PodAntiAffinity = `
 apiVersion: v1
 kind: Pod
 metadata:
   name: {{ .Name }}
   annotations:
-    capstan-testing: mysql-tpcc
-    capstan-testingcase: {{ .TestingName }}
+    capstan-test: {{ .Name }}
+    capstan-testcase: {{ .TestingName }}
   labels:
     component: capstan
-    testing: {{ .Name }}
+    test: {{ .Name }}
   namespace: {{ .Namespace }}
 spec:
   affinity:
@@ -41,15 +42,23 @@ spec:
             -  {{ .Label }}
         topologyKey: "kubernetes.io/hostname"
   containers:
-  - name: testing-mysql-tpcc
+  - name: {{ .Name }}
     image: {{ .Image }}
     imagePullPolicy: Always
     args: [{{ .Args }}]
-    env:
-    - name: MYSQL_HOST
-      value: {{ .DNSName }}
-    - name: MYSQL_ROOT_PASSWORD
-      value: {{ .PASSWORD }}
+    envFrom:
+    - configMapRef:
+        name: capstan-envs
+    volumeMounts:
+    - name: script-volume
+      mountPath: /opt/capstan
+  volumes:
+    - name: script-volume
+      configMap:
+        name: capstan-script
+        items:
+        - key: run_test.sh
+          path: run_test.sh
   restartPolicy: Never
   tolerations:
   - effect: NoSchedule
@@ -58,17 +67,18 @@ spec:
   - key: CriticalAddonsOnly
     operator: Exists
 `
-	mysqlTPCCPodAffinity = `
+	// PodAffinity is the manifest for test tool running on the same node with workload.
+	PodAffinity = `
 apiVersion: v1
 kind: Pod
 metadata:
   name: {{ .Name }}
   annotations:
-    capstan-testing: mysql-tpcc
-    capstan-testingcase: {{ .TestingName }}
+    capstan-test: {{ .Name }}
+    capstan-testcase: {{ .TestingName }}
   labels:
     component: capstan
-    testing: {{ .Name }}
+    test: {{ .Name }}
   namespace: {{ .Namespace }}
 spec:
   affinity:
@@ -82,15 +92,23 @@ spec:
             -  {{ .Label }}
         topologyKey: "kubernetes.io/hostname"
   containers:
-  - name: testing-mysql-tpcc
+  - name: {{ .Name }}
     image: {{ .Image }}
     imagePullPolicy: Always
     args: [{{ .Args }}]
-    env:
-    - name: MYSQL_HOST
-      value: {{ .DNSName }}
-    - name: MYSQL_ROOT_PASSWORD
-      value: {{ .PASSWORD }}
+    envFrom:
+    - configMapRef:
+        name: capstan-envs
+    volumeMounts:
+    - name: script-volume
+      mountPath: /opt/capstan
+  volumes:
+    - name: script-volume
+      configMap:
+        name: capstan-script
+        items:
+        - key: run_test.sh
+          path: run_test.sh
   restartPolicy: Never
   tolerations:
   - effect: NoSchedule

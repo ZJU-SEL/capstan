@@ -17,13 +17,13 @@ limitations under the License.
 package workload
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"strings"
 	"text/template"
 	"time"
 
+	"github.com/ZJU-SEL/capstan/pkg/util"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -89,7 +89,7 @@ func DeletePod(kubeClient kubernetes.Interface, name string) error {
 	return nil
 }
 
-// IsPodFailing returns whether a testing case pod is failing and isn't likely to succeed.
+// IsPodFailing returns whether a test case pod is failing and isn't likely to succeed.
 // TODO(mozhuli): this may require more revisions as we get more experience with
 // various types of failures that can occur.
 func IsPodFailing(pod *v1.Pod) (bool, error) {
@@ -119,67 +119,22 @@ func IsPodFailing(pod *v1.Pod) (bool, error) {
 	return false, nil
 }
 
-// GetIPs gets podIP and hostIP of a running pod created by a workload, If no pod is found,
-// or if pod's status is not running, returns an error.
-func GetIPs(kubeClient kubernetes.Interface, name string) (string, string, error) {
-	n := 0
-	for {
-		// Sleep between each poll, which should give the workload enough time to create a Pod
-		// TODO(mozhuli): Use a watcher instead of polling.
-		time.Sleep(10 * time.Second)
-
-		// Make sure there's a pod.
-		pod, err := kubeClient.CoreV1().Pods(Namespace).Get(name, apismetav1.GetOptions{})
-		if err != nil {
-			return "", "", errors.WithStack(err)
-		}
-
-		// Make sure the pod isn't failing.
-		if isFailing, err := IsPodFailing(pod); isFailing {
-			return "", "", err
-		}
-
-		if pod.Status.Phase == v1.PodRunning {
-			return pod.Status.PodIP, pod.Status.HostIP, nil
-		}
-
-		// return an error, if has not get the pod ip for 60 seconds.
-		if n > 5 {
-			return "", "", errors.Errorf("long time to get pod %s ip", name)
-		}
-		n++
+// CheckWorkloadAvailable check workload is available or not.
+// TODO(mozhuli): add more rules to check workload is available or not.
+func CheckWorkloadAvailable(kubeClient kubernetes.Interface, tool Tool) error {
+	switch tool.GetWorkload().Name {
+	case "nginx":
+		return checkDeployment(kubeClient, tool.GetWorkload().Helm.Name+"-"+tool.GetWorkload().Name)
+	case "mysql":
+		return checkDeployment(kubeClient, tool.GetWorkload().Helm.Name+"-"+tool.GetWorkload().Name)
+	case "iperf3":
+		return checkDeployment(kubeClient, tool.GetWorkload().Helm.Name+"-"+tool.GetWorkload().Name)
 	}
+	return errors.Errorf("Not meet any rules to check the workload available or not")
 }
 
-// GetVIP gets the service ip.
-func GetVIP(kubeClient kubernetes.Interface, name string) error {
-	n := 0
-	for {
-		// Sleep between each poll, which should give the workload enough time to create
-		// TODO(mozhuli): Use a watcher instead of polling.
-		time.Sleep(10 * time.Second)
-
-		// Make sure there's a deployment.
-		deployment, err := kubeClient.AppsV1().Deployments(Namespace).Get(name, apismetav1.GetOptions{})
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		// Make sure the deployment is available.
-		if deployment.Status.Conditions[0].Type == appsv1.DeploymentAvailable {
-			return nil
-		}
-
-		// return an error, if deployment not available for 60 seconds.
-		if n > 5 {
-			return errors.Errorf("deployment %q not available for 60 seconds", name)
-		}
-		n++
-	}
-}
-
-// CheckDeployment check the deployment created by a workload available or not.
-func CheckDeployment(kubeClient kubernetes.Interface, name string) error {
+// checkDeployment check the deployment created by a workload available or not.
+func checkDeployment(kubeClient kubernetes.Interface, name string) error {
 	n := 0
 	for {
 		// Sleep between each poll, which should give the workload enough time to create
@@ -205,19 +160,6 @@ func CheckDeployment(kubeClient kubernetes.Interface, name string) error {
 	}
 }
 
-// HasTestingDone checks the testing case has finished
-// or not(use the finish mark "Capstan Testing Done").
-func HasTestingDone(data []byte) bool {
-	scanner := bufio.NewScanner(bytes.NewBuffer(data))
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "Capstan Testing Done" {
-			return true
-		}
-	}
-	return false
-}
-
 // FomatArgs fomats the config agrs to yaml agrs of kubernetes.
 func FomatArgs(agrs string) string {
 	ss := strings.Split(agrs, " ")
@@ -232,14 +174,9 @@ func FomatArgs(agrs string) string {
 	return str
 }
 
-// BuildWorkloadPodName builds the name of workload pod.
-func BuildWorkloadPodName(name, testingName string) string {
-	return strings.ToLower("capstan-" + name + "-" + testingName)
-}
-
-// BuildTestingPodName builds the name of testing pod.
-func BuildTestingPodName(name, testingName string) string {
-	return strings.ToLower("capstan-" + name + "-" + testingName)
+// BuildTestPodName builds the name of test pod.
+func BuildTestPodName(name, testName string) string {
+	return strings.ToLower("capstan-" + name + "-" + testName)
 }
 
 // CreateNamespace creates a namespace.
@@ -256,7 +193,56 @@ func CreateNamespace(kubeClient kubernetes.Interface, namespace string) error {
 // DeleteNamespace deletes a namespace.
 func DeleteNamespace(kubeClient kubernetes.Interface, namespace string) error {
 	if err := kubeClient.CoreV1().Namespaces().Delete(namespace, apismetav1.NewDeleteOptions(0)); err != nil {
-		return errors.Wrapf(err, "failed to delete namespace %v", namespace)
+		return errors.Wrapf(err, "Failed to delete namespace %s", namespace)
+	}
+
+	err := wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
+		_, err := kubeClient.CoreV1().Namespaces().Get(Namespace, apismetav1.GetOptions{})
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return true, nil
+			}
+
+			return false, err
+		}
+
+		return false, nil
+	})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
+// CleanNamespace make sure there is a clean namespace.
+func CleanNamespace(kubeClient kubernetes.Interface, namespace string) error {
+	_, err := kubeClient.CoreV1().Namespaces().Get(Namespace, apismetav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+	}
+
+	return DeleteNamespace(kubeClient, namespace)
+}
+
+// CreateConfigMapFromFile creates a configmap from specific file.
+func CreateConfigMapFromFile(kubeClient kubernetes.Interface, filePath string) error {
+	ret, err := util.RunCommand("kubectl", "create", "configmap", "capstan-script", "--from-file=run_test.sh="+filePath, "-n="+Namespace)
+	if err != nil {
+		return errors.Errorf("failed create configmap, ret:%s, error:%v", strings.Join(ret, "\n"), err)
+	}
+
+	return nil
+}
+
+// CreateConfigMap creates a configmap from a map.
+func CreateConfigMap(kubeClient kubernetes.Interface, name string, data map[string]string) error {
+	cmSpec := &v1.ConfigMap{ObjectMeta: apismetav1.ObjectMeta{Name: name}, Data: data}
+	_, err := kubeClient.CoreV1().ConfigMaps(Namespace).Create(cmSpec)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to create configmap %v", name)
 	}
 
 	return nil

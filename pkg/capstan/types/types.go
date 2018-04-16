@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
-	"github.com/ZJU-SEL/capstan/pkg/prometheus"
 	"github.com/ZJU-SEL/capstan/pkg/workload"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
@@ -29,24 +28,24 @@ import (
 var (
 	// ResultsDir is the directory of testing results.
 	ResultsDir = "/tmp/capstan"
-	// Provider is the instance provider
-	Provider string
+	// Provider is provider who of kubernetes.
+	Provider = "local"
 	// PushgatewayEndpoint is the endpoint of pushGateway.
 	PushgatewayEndpoint string
-	// UUID is used to mark a run of capstan.
+	// UUID is used to mark once running of capstan.
 	UUID string
 )
 
 // Config is the internal representation of capstan configuration.
 type Config struct {
-	UUID       string `json:"UUID"`
-	ResultsDir string `json:"ResultsDir"`
-	Provider   string `json:"Provider"`
-	Address    string `json:"Address"`
-	Steps      int    `json:"Steps"`
-	Namespace  string `json:"Namespace"`
-	Prometheus prometheus.Config
-	Workloads  []workload.Workload
+	UUID                string `json:"UUID"`
+	ResultsDir          string `json:"ResultsDir"`
+	Provider            string `json:"Provider"`
+	Address             string `json:"Address"`
+	Steps               int    `json:"Steps"`
+	Namespace           string `json:"Namespace"`
+	PushgatewayEndpoint string `json:"PushgatewayEndpoint"`
+	Workloads           []workload.Workload
 }
 
 // ReadConfig reads from a file with the given name and returns
@@ -72,13 +71,18 @@ func ReadConfig(filepath string) (Config, error) {
 		ResultsDir = config.ResultsDir
 	}
 
-	Provider = config.Provider
+	if config.Provider != "" {
+		Provider = config.Provider
+	}
 
 	if config.Namespace != "" {
 		workload.Namespace = config.Namespace
 	}
 
-	PushgatewayEndpoint = config.Prometheus.PushgatewayEndpoint
+	if config.PushgatewayEndpoint == "" {
+		return config, errors.New("PushgatewayEndpoint must not be null")
+	}
+	PushgatewayEndpoint = config.PushgatewayEndpoint
 
 	return config, nil
 }
