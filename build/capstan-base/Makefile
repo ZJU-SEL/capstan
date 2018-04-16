@@ -1,4 +1,3 @@
-#!/bin/sh
 # Copyright (c) 2018 The ZJU-SEL Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,4 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-/usr/local/bin/wrk $* && echo "Capstan Testing Done"
+TARGET = capstan-base
+REGISTRY ?= wadelee
+IMAGE = $(REGISTRY)/$(TARGET)
+DOCKER ?= docker
+VERSION ?= v0.1
+
+all: container
+
+container:
+	$(DOCKER) build -t $(REGISTRY)/$(TARGET):latest -t $(REGISTRY)/$(TARGET):$(VERSION) .
+
+push:
+	$(DOCKER) push $(REGISTRY)/$(TARGET):latest
+	$(DOCKER) push $(REGISTRY)/$(TARGET):$(VERSION)
+
+.PHONY: all container push
+
+clean:
+	$(DOCKER) rmi $(REGISTRY)/$(TARGET):latest $(REGISTRY)/$(TARGET):$(VERSION) || true

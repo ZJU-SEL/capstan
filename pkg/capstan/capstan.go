@@ -26,7 +26,6 @@ import (
 	"github.com/ZJU-SEL/capstan/pkg/capstan/loader"
 	"github.com/ZJU-SEL/capstan/pkg/capstan/types"
 	"github.com/ZJU-SEL/capstan/pkg/dashboard"
-	"github.com/ZJU-SEL/capstan/pkg/workload"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
@@ -53,18 +52,6 @@ func Run(kubeClient kubernetes.Interface, capstanConfig string) error {
 	}
 
 	// 2. Load all workloads
-	err = workload.CreateNamespace(kubeClient, workload.Namespace)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		err := workload.DeleteNamespace(kubeClient, workload.Namespace)
-		if err != nil {
-			glog.Warningf("Failed delete namespace %v: %v", workload.Namespace, err)
-		}
-	}()
-
 	workloads, err := loader.LoadAllWorkloads(cfg.Workloads)
 	if err != nil {
 		return errors.Wrap(err, "Failed load workloads")

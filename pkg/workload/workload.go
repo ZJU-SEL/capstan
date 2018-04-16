@@ -19,7 +19,6 @@ package workload
 import (
 	"time"
 
-	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -32,84 +31,57 @@ var (
 type Interface interface {
 	// Run runs a testing workload.
 	Run(kubeClient kubernetes.Interface) error
-	// TestingTool returns the workload‘s Tool interface.
-	TestingTool() (Tool, error)
+	// TestTool returns the workload‘s Tool interface.
+	TestTool() (Tool, error)
 }
 
 // Tool should be implemented by a testing tool.
 type Tool interface {
-	// Run runs the defined testing case set.
-	Run(kubeClient kubernetes.Interface, testingCase TestingCase) error
-	// GetTestingResults gets the testing results of a testing case.
-	GetTestingResults(kubeClient kubernetes.Interface) error
-	// Cleanup cleans up all resources created by a testing case.
+	// Run runs the defined test case set.
+	Run(kubeClient kubernetes.Interface, testCase TestCase) error
+	// HasTestDone check a test case has finish or not.
+	HasTestDone(kubeClient kubernetes.Interface) error
+	// Cleanup cleans up all resources created by a test case.
 	Cleanup(kubeClient kubernetes.Interface) error
-	// GetName returns the name of this testing tool.
+	// GetName returns the name of this test tool.
 	GetName() string
-	// GetImage returns the image name of this testing tool.
-	GetImage() string
-	// GetSteps returns the steps between each testing case.
+	// GetSteps returns the steps between each test case.
 	GetSteps() time.Duration
-	// GetTestingCaseSet returns the testing case set which the testing tool will run.
-	GetTestingCaseSet() []TestingCase
+	// GetTestCaseSet returns the test case set which the test tool will run.
+	GetTestCaseSet() []TestCase
+	// GetWorkload returns a workload that the test tool to be test.
+	GetWorkload() Workload
 }
 
 // Workload is the internal representation of a testing workload.
 type Workload struct {
-	Name        string `json:"name"`
-	Image       string `json:"image"`
-	Helm        Helm
-	Frequency   int `json:"frequency"`
-	TestingTool TestingTool
+	Name      string `json:"name"`
+	Helm      Helm
+	Frequency int `json:"frequency"`
+	TestTool  TestTool
 }
 
 // Helm is the internal representation of helm.
 type Helm struct {
 	Name  string `json:"name"`
 	Set   string `json:"set"`
-	Chart string `json:"Chart"`
+	Chart string `json:"chart"`
 }
 
-// TestingTool is the internal representation of a testing tool.
-type TestingTool struct {
-	Name           string `json:"name"`
-	Image          string `json:"image"`
-	Steps          int    `json:"Steps"`
-	TestingCaseSet []TestingCase
+// TestTool is the internal representation of a test tool.
+type TestTool struct {
+	Name        string `json:"name"`
+	Image       string `json:"image"`
+	Script      string `json:"script"`
+	Steps       int    `json:"steps"`
+	TestCaseSet []TestCase
 }
 
-// TestingCase is the internal representation of a testing case.
-type TestingCase struct {
-	Name            string `json:"name"`
-	TestingToolArgs string `json:"testingToolArgs"`
-}
-
-// DefWorkloads is the defined workloads.
-var DefWorkloads = []string{
-	"nginx",
-	"iperf3",
-	"mysql",
-}
-
-// DefTools is list of the defined testing tools.
-var DefTools = []string{
-	"wrk",
-	"iperf3",
-	"tpcc-mysql",
-}
-
-// TestingCaseSetHasDefined finds whether all the string in slice a have defined in slice b or not.
-func TestingCaseSetHasDefined(testingCaseSet []TestingCase, defs []string) error {
-	for _, testingCase := range testingCaseSet {
-		found := false
-		for _, def := range defs {
-			if testingCase.Name == def {
-				found = true
-			}
-		}
-		if !found {
-			return errors.Errorf("Testing case %v has not defined, the testingCaseSet must in %v", testingCase.Name, defs)
-		}
-	}
-	return nil
+// TestCase is the internal representation of a test case.
+type TestCase struct {
+	Name     string `json:"name"`
+	Affinity bool   `json:"affinity"`
+	Args     string `json:"args"`
+	Envs     string `json:"envs"`
+	Metrics  string `json:"metrics"`
 }

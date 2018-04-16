@@ -1,3 +1,4 @@
+#!/bin/sh
 # Copyright (c) 2018 The ZJU-SEL Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,10 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM williamyeh/wrk:4.0.2
+iperf3 $* > test-log 2>&1
+if [ $? -ne 0 ]
+then
+    echo "Failed run wrk $*"
+    cat test-log
+    exit 1
+fi
 
-MAINTAINER The ZJU-SEL team
+# Resolve result
+echo "Resolving result"
+cat test-log
 
-ADD run_wrk.sh /run_wrk.sh
+line=`grep "receiver" test-log`
 
-ENTRYPOINT ["/run_wrk.sh"]
+bandwidth=`echo $line|cut -d " " -f7`
+
+RESULT="BandWidth $bandwidth $PrometheusLabel"

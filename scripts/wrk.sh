@@ -1,3 +1,4 @@
+#!/bin/sh
 # Copyright (c) 2018 The ZJU-SEL Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,22 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-TARGET = tpcc-mysql
-REGISTRY ?= wadelee
-IMAGE = $(REGISTRY)/$(TARGET)
-DOCKER ?= docker
-VERSION ?= v0.1
+/usr/local/bin/wrk $* > test-log 2>&1
+if [ $? -ne 0 ]
+then
+    echo "Failed run wrk $*"
+    cat test-log
+    exit 1
+fi
 
-all: container
+# Resolve result
+echo "Resolving result"
+cat test-log
 
-container:
-	$(DOCKER) build -t $(REGISTRY)/$(TARGET):latest -t $(REGISTRY)/$(TARGET):$(VERSION) .
+line=`grep "Requests/sec:" test-log`
 
-push:
-	$(DOCKER) push $(REGISTRY)/$(TARGET):latest
-	$(DOCKER) push $(REGISTRY)/$(TARGET):$(VERSION)
+qps=`echo $line|cut -d " " -f2`
 
-.PHONY: all container push
-
-clean:
-	$(DOCKER) rmi $(REGISTRY)/$(TARGET):latest $(REGISTRY)/$(TARGET):$(VERSION) || true
+RESULT="QPS $qps $PrometheusLabel"
