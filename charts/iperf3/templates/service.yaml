@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "iperf3.fullname" . }}
+  labels:
+    app: {{ template "iperf3.fullname" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: iperf3
+      name: iperf3
+  selector:
+    app: {{ template "iperf3.fullname" . }}
+    release: "{{ .Release.Name }}"
