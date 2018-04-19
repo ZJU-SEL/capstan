@@ -6,13 +6,13 @@
 
 ## Introduction
 
-capstan is a benchmarker which contains series of workloads and testing tools for Kubernetes. You can obtain the performance data of each type workload in the specific configuration of Kubernetes cluster offered by different cloud offerings.
+Capstan is a testing automation framework for workloads which managed by [helm](https://helm.sh/) and running on [Kubernetes](https://kubernetes.io/). By adding a test script for a new workload, you can obtain the performance data of a new workload and the capability data of Kubernetes when running the new workload easily. Capstan can help you to choose your own Kubernetes cluster by comparing the test data of different Kubernetes clusters and know where are the bottlenecks of your Kubernetes cluster for each type of workload.
 
 ## What is the scope of this project
 
-capstan aims to provide a series of workloads and testing tools for Kubernetes cluster:
+capstan aims to provide a testing automation framework which has excellent extensibility for workloads which managed by helm and running on Kubernetes:
 
-- Run every workload's testing cases.
+- Start a workload and run test script for each test case sequentially.
 
 - Collect the testing results and the performance data of Kubernetes component and Kubernetes cluster.
 
@@ -108,11 +108,11 @@ You can visit `<Your-HostIP>:3000` to see Grafana. There is a default user "admi
 ## Documentation
 
 - [Deploying](docs/deploy.md)
+- [How to add a new workload and test it](docs/add-new-workload.md)
 
 ## Roadmap
 
-- Design the testing indicators（P0).
 - Design and Implement the framework of capstan（P0).
 - Use Prometheus and Grafana to analysis and display the testing results（P0).
-- Implement multiple workloads and testing tools（P1).
-- Implement the online ranking system（P2).
+- Add typical workloads and the corresponding test script（P1).
+- Implement a online ranking system（P2).
