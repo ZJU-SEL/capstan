@@ -129,6 +129,8 @@ func CheckWorkloadAvailable(kubeClient kubernetes.Interface, tool Tool) error {
 		return checkDeployment(kubeClient, tool.GetWorkload().Helm.Name+"-"+tool.GetWorkload().Name)
 	case "iperf3":
 		return checkDeployment(kubeClient, tool.GetWorkload().Helm.Name+"-"+tool.GetWorkload().Name)
+	case "spark":
+		return checkDeployment(kubeClient, tool.GetWorkload().Helm.Name+"-"+"master")
 	}
 	return errors.Errorf("Not meet any rules to check the workload available or not")
 }

@@ -39,6 +39,7 @@ type TestTool struct {
 	Workload    *Workload
 	Name        string
 	Script      string
+	Image       string
 	Steps       time.Duration
 	CurrentTest workload.TestCase
 	TestCaseSet []workload.TestCase
@@ -104,7 +105,7 @@ func (t *TestTool) Run(kubeClient kubernetes.Interface, testCase workload.TestCa
 		Name:        testPodName,
 		Namespace:   workload.Namespace,
 		TestingName: testCase.Name,
-		Image:       "wadelee/capstan-base",
+		Image:       t.Image,
 		Label:       t.Workload.Helm.Name + "-" + t.Workload.Name,
 		Args:        workload.FomatArgs(args),
 	}

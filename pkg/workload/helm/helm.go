@@ -102,6 +102,7 @@ func (w *Workload) TestTool() (workload.Tool, error) {
 		Workload:    w,
 		Name:        w.workload.TestTool.Name,
 		Script:      w.workload.TestTool.Script,
+		Image:       w.workload.TestTool.Image,
 		Steps:       time.Duration(w.workload.TestTool.Steps) * time.Second,
 		TestCaseSet: w.workload.TestTool.TestCaseSet,
 	}, nil

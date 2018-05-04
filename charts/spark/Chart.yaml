@@ -1,0 +1,10 @@
+apiVersion: v1
+appVersion: 2.2.0
+description: A Helm chart for spark workload test of capstan
+name: spark
+version: 0.1.0
+home: http://spark.apache.org
+icon: http://spark.apache.org/images/spark-logo-trademark.png
+sources:
+  - https://github.com/kubernetes/kubernetes/tree/master/examples/spark
+  - https://github.com/apache/spark
