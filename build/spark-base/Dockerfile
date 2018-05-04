@@ -14,28 +14,9 @@
 
 FROM wadelee/capstan-pusher AS capstan-pusher
 
-FROM debian:jessie
+FROM p7hb/docker-spark:2.2.0
 
 MAINTAINER The ZJU-SEL team
-
-# install git iperf3 mysql-client
-RUN apt-get update && apt-get install -y --force-yes --no-install-recommends \
-    build-essential \
-    ca-certificates \
-    libmysql++-dev \
-    git \
-    iperf3 \
-    mysql-client
-
-# install wrk
-RUN git clone https://github.com/wg/wrk \
-    && cd wrk \
-    && make \
-    && cp wrk /usr/local/bin/wrk \
-    && cd .. \
-    && rm -rf wrk
-
-RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # enable source command
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
