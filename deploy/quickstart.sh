@@ -14,7 +14,8 @@
 # limitations under the License.
 
 # config the dashboards
-sh $GOPATH/src/github.com/ZJU-SEL/capstan/grafana-dashboards/configDashboard.sh
+cd $GOPATH/src/github.com/ZJU-SEL/capstan/grafana-dashboards
+./configDashboard.sh
 
 # delete the conflicts
 PORTS=(3000 9090 9091)

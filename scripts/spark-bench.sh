@@ -36,4 +36,6 @@ line=`grep "|sparkpi|" test-log`
 
 total_runtime=`echo $line|cut -d "|" -f4|cut -d " " -f2`
 
+total_runtime=$((total_runtime/1000000))
+
 RESULT="total_runtime $total_runtime $PrometheusLabel"

@@ -1,0 +1,23 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: "{{ template "kubeflow.fullname" . }}-spartakus-volunteer"
+  labels:
+    heritage: {{ .Release.Service | quote }}
+    release: {{ .Release.Name | quote }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+spec:
+  replicas: {{ .Values.spartakus.replicaCount}}
+  template:
+    metadata:
+      labels:
+        app: spartakus-volunteer
+    spec:
+      containers:
+      - args:
+        - volunteer
+        - --cluster-id=a5fa3b1e-ace2-46f6-92ca-9de76d801fd8
+        - --database=https://stats-collector.kubeflow.org
+        image: {{ .Values.spartakus.image}}
+        name: volunteer
+      serviceAccountName: spartakus

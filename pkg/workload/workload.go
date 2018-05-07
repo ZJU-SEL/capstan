@@ -70,17 +70,18 @@ type Helm struct {
 
 // TestTool is the internal representation of a test tool.
 type TestTool struct {
-	Name        string `json:"name"`
-	Image       string `json:"image"`
-	Script      string `json:"script"`
-	Steps       int    `json:"steps"`
-	TestCaseSet []TestCase
+	Name               string `json:"name"`
+	Image              string `json:"image"`
+	Script             string `json:"script"`
+	Steps              int    `json:"steps"`
+	ServiceAccountName string `json:"serviceAccountName"`
+	TestCaseSet        []TestCase
 }
 
 // TestCase is the internal representation of a test case.
 type TestCase struct {
 	Name     string `json:"name"`
-	Affinity bool   `json:"affinity"`
+	Affinity string `json:"affinity"`
 	Args     string `json:"args"`
 	Envs     string `json:"envs"`
 	Metrics  string `json:"metrics"`

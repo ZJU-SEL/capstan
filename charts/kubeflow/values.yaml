@@ -1,0 +1,24 @@
+# Default values for kubeflow.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+ambassador:
+  limitsCpu: 1
+  limitsMemory: 400Mi
+  requestsCpu: 200m
+  requestsMemory: 100Mi
+  image: quay.io/datawire/ambassador:0.30.1
+  statsdImage: quay.io/datawire/statsd:0.30.1
+  replicaCount: 3
+  adminServicePort: 8877
+  adminServiceType: ClusterIP
+  servicePort: 80
+  serviceType: ClusterIP
+
+spartakus:
+  replicaCount: 1
+  image: gcr.io/google_containers/spartakus-amd64:v1.0.0
+
+tfJob:
+  replicaCount: 1
+  image: gcr.io/kubeflow-images-public/tf_operator:v20180329-a7511ff

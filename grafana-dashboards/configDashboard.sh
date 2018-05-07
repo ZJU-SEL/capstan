@@ -30,6 +30,8 @@ REFID=(A B C D E F)
 declare -A NGINX=(["QPS"]="capstan_QPS")
 declare -A IPERF3=(["BandWidth"]="capstan_BandWidth")
 declare -A MYSQL=(["TPMC"]="capstan_TPMC")
+declare -A SPARK=(["total_runtime"]="capstan_total_runtime")
+declare -A KUBEFLOW=(["images_second"]="capstan_images_second")
 
 PROMQL=""
 
@@ -44,6 +46,12 @@ function GetPromQL(){
 		;;
 	"mysql")
 		PROMQL=${MYSQL[$2]}
+		;;
+	"spark")
+		PROMQL=${SPARK[$2]}
+		;;
+	"kubeflow")
+		PROMQL=${KUBEFLOW[$2]}
 		;;
 	*)
 		# TODO(ZeroMagic): address the non-existent workloads

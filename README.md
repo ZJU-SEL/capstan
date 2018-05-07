@@ -91,7 +91,8 @@ scrape_configs:
 EOF
 
 # deploy
-sh $GOPATH/src/github.com/ZJU-SEL/capstan/deploy/quickstart.sh
+cd $GOPATH/src/github.com/ZJU-SEL/capstan/deploy
+./quickstart.sh
 
 ```
 
