@@ -99,11 +99,12 @@ func (w *Workload) Run(kubeClient kubernetes.Interface) error {
 // TestTool initializes a new test tool for the workload (to adhere to workload.Interface).
 func (w *Workload) TestTool() (workload.Tool, error) {
 	return &TestTool{
-		Workload:    w,
-		Name:        w.workload.TestTool.Name,
-		Script:      w.workload.TestTool.Script,
-		Image:       w.workload.TestTool.Image,
-		Steps:       time.Duration(w.workload.TestTool.Steps) * time.Second,
-		TestCaseSet: w.workload.TestTool.TestCaseSet,
+		Workload:           w,
+		Name:               w.workload.TestTool.Name,
+		Script:             w.workload.TestTool.Script,
+		Image:              w.workload.TestTool.Image,
+		Steps:              time.Duration(w.workload.TestTool.Steps) * time.Second,
+		ServiceAccountName: w.workload.TestTool.ServiceAccountName,
+		TestCaseSet:        w.workload.TestTool.TestCaseSet,
 	}, nil
 }

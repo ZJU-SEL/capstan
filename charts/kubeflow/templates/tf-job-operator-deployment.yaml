@@ -1,0 +1,40 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: "{{ template "kubeflow.fullname" . }}-tf-job-operator"
+  labels:
+    heritage: {{ .Release.Service | quote }}
+    release: {{ .Release.Name | quote }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+spec:
+  replicas: {{ .Values.tfJob.relicaCount}}
+  template:
+    metadata:
+      labels:
+        name: tf-job-operator
+    spec:
+      containers:
+      - command:
+        - /opt/mlkube/tf-operator
+        - --controller-config-file=/etc/config/controller_config_file.yaml
+        - --alsologtostderr
+        - -v=1
+        env:
+        - name: MY_POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: MY_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        image: {{ .Values.tfJob.image}}
+        name: tf-job-operator
+        volumeMounts:
+        - mountPath: /etc/config
+          name: config-volume
+      serviceAccountName: tf-job-operator
+      volumes:
+      - configMap:
+          name: tf-job-operator-config
+        name: config-volume

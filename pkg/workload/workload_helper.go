@@ -131,6 +131,16 @@ func CheckWorkloadAvailable(kubeClient kubernetes.Interface, tool Tool) error {
 		return checkDeployment(kubeClient, tool.GetWorkload().Helm.Name+"-"+tool.GetWorkload().Name)
 	case "spark":
 		return checkDeployment(kubeClient, tool.GetWorkload().Helm.Name+"-"+"master")
+	case "kubeflow":
+		err := checkDeployment(kubeClient, tool.GetWorkload().Helm.Name+"-"+tool.GetWorkload().Name+"-"+"tf-job-operator")
+		if err != nil {
+			return err
+		}
+		err = checkDeployment(kubeClient, tool.GetWorkload().Helm.Name+"-"+tool.GetWorkload().Name+"-"+"spartakus-volunteer")
+		if err != nil {
+			return err
+		}
+		return checkDeployment(kubeClient, tool.GetWorkload().Helm.Name+"-"+tool.GetWorkload().Name+"-"+"ambassador")
 	}
 	return errors.Errorf("Not meet any rules to check the workload available or not")
 }
@@ -141,7 +151,7 @@ func checkDeployment(kubeClient kubernetes.Interface, name string) error {
 	for {
 		// Sleep between each poll, which should give the workload enough time to create
 		// TODO(mozhuli): Use a watcher instead of polling.
-		time.Sleep(20 * time.Second)
+		time.Sleep(30 * time.Second)
 
 		// Make sure there's a deployment.
 		deployment, err := kubeClient.AppsV1().Deployments(Namespace).Get(name, apismetav1.GetOptions{})

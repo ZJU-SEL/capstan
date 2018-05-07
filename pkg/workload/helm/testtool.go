@@ -20,7 +20,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 	"time"
 
@@ -36,13 +35,14 @@ import (
 
 // TestTool represents a test tool which used to test a workload managed by helm.
 type TestTool struct {
-	Workload    *Workload
-	Name        string
-	Script      string
-	Image       string
-	Steps       time.Duration
-	CurrentTest workload.TestCase
-	TestCaseSet []workload.TestCase
+	Workload           *Workload
+	Name               string
+	Script             string
+	Image              string
+	Steps              time.Duration
+	ServiceAccountName string
+	CurrentTest        workload.TestCase
+	TestCaseSet        []workload.TestCase
 }
 
 // Ensure the test tool implements workload.Tool interface.
@@ -87,7 +87,7 @@ func (t *TestTool) Run(kubeClient kubernetes.Interface, testCase workload.TestCa
 		"startTime":    time.Now().Format("2006-01-02 15:04:05"),
 		"workloadName": t.Workload.Name,
 		"testCase":     t.CurrentTest.Name,
-		"affinity":     strconv.FormatBool(t.CurrentTest.Affinity),
+		"affinity":     t.CurrentTest.Affinity,
 		"metrics":      t.CurrentTest.Metrics,
 	}
 	data["PrometheusLabel"] = megeLabel(labelData)
@@ -99,15 +99,23 @@ func (t *TestTool) Run(kubeClient kubernetes.Interface, testCase workload.TestCa
 
 	// 5. start a test pod to test the workload.
 	testPodName := workload.BuildTestPodName(t.GetName(), testCase.Name)
-	testPod, args := t.findTemplate(testCase.Name)
+	testPod, err := t.findTemplate(testCase.Name)
+	if err != nil {
+		return errors.Wrapf(err, "failed to find template")
+	}
 
-	tempTestArgs := struct{ Name, Namespace, TestingName, Image, Label, Args string }{
-		Name:        testPodName,
-		Namespace:   workload.Namespace,
-		TestingName: testCase.Name,
-		Image:       t.Image,
-		Label:       t.Workload.Helm.Name + "-" + t.Workload.Name,
-		Args:        workload.FomatArgs(args),
+	if t.ServiceAccountName == "" {
+		t.ServiceAccountName = "default"
+	}
+
+	tempTestArgs := struct{ Name, Namespace, TestingName, Image, Label, Args, ServiceAccountName string }{
+		Name:               testPodName,
+		Namespace:          workload.Namespace,
+		TestingName:        testCase.Name,
+		Image:              t.Image,
+		Label:              t.Workload.Helm.Name + "-" + t.Workload.Name,
+		Args:               workload.FomatArgs(t.CurrentTest.Args),
+		ServiceAccountName: t.ServiceAccountName,
 	}
 
 	testPodBytes, err := workload.ParseTemplate(testPod, tempTestArgs)
@@ -210,11 +218,18 @@ func (t *TestTool) GetWorkload() workload.Workload {
 }
 
 // findTemplate returns the true testing tool template and arguments for different testing cases.
-func (t *TestTool) findTemplate(name string) (string, string) {
-	if t.CurrentTest.Affinity {
-		return PodAffinity, t.CurrentTest.Args
+func (t *TestTool) findTemplate(name string) (string, error) {
+	if t.CurrentTest.Affinity == "true" {
+		return PodAffinity, nil
 	}
-	return PodAntiAffinity, t.CurrentTest.Args
+	if t.CurrentTest.Affinity == "false" {
+		return PodAntiAffinity, nil
+	}
+	if t.CurrentTest.Affinity == "any" {
+		return PodAnyAffinity, nil
+	}
+	return "", errors.Errorf("there isn't any templates about %s", t.CurrentTest.Affinity)
+
 }
 
 // parseEnvs parse string to map[string]string

@@ -66,6 +66,7 @@ spec:
     operator: Exists
   - key: CriticalAddonsOnly
     operator: Exists
+  serviceAccountName: {{ .ServiceAccountName }}
 `
 	// PodAffinity is the manifest for test tool running on the same node with workload.
 	PodAffinity = `
@@ -116,5 +117,47 @@ spec:
     operator: Exists
   - key: CriticalAddonsOnly
     operator: Exists
+  serviceAccountName: {{ .ServiceAccountName }}
+`
+	// PodAnyAffinity is the manifest for test tool running on the any node with workload.
+	PodAnyAffinity = `
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .Name }}
+  annotations:
+    capstan-test: {{ .Name }}
+    capstan-testcase: {{ .TestingName }}
+  labels:
+    component: capstan
+    test: {{ .Name }}
+  namespace: {{ .Namespace }}
+spec:
+  containers:
+  - name: {{ .Name }}
+    image: {{ .Image }}
+    imagePullPolicy: Always
+    args: [{{ .Args }}]
+    envFrom:
+    - configMapRef:
+        name: capstan-envs
+    volumeMounts:
+    - name: script-volume
+      mountPath: /opt/capstan
+  volumes:
+    - name: script-volume
+      configMap:
+        name: capstan-script
+        items:
+        - key: run_test.sh
+          path: run_test.sh
+  restartPolicy: Never
+  tolerations:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/master
+    operator: Exists
+  - key: CriticalAddonsOnly
+    operator: Exists
+  serviceAccountName: {{ .ServiceAccountName }}
 `
 )

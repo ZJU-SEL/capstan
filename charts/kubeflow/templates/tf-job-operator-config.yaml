@@ -1,0 +1,13 @@
+apiVersion: v1
+data:
+  controller_config_file.yaml: |-
+    {
+        "grpcServerFilePath": "/opt/mlkube/grpc_tensorflow_server/grpc_tensorflow_server.py"
+    }
+kind: ConfigMap
+metadata:
+  name: tf-job-operator-config
+  labels:
+    heritage: {{ .Release.Service | quote }}
+    release: {{ .Release.Name | quote }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
