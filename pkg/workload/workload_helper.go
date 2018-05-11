@@ -25,7 +25,7 @@ import (
 
 	"github.com/ZJU-SEL/capstan/pkg/util"
 	"github.com/pkg/errors"
-	appsv1 "k8s.io/api/apps/v1"
+	//	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apismetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -141,6 +141,8 @@ func CheckWorkloadAvailable(kubeClient kubernetes.Interface, tool Tool) error {
 			return err
 		}
 		return checkDeployment(kubeClient, tool.GetWorkload().Helm.Name+"-"+tool.GetWorkload().Name+"-"+"ambassador")
+	case "wordpress":
+		return checkDeployment(kubeClient, tool.GetWorkload().Helm.Name+"-"+tool.GetWorkload().Name)
 	}
 	return errors.Errorf("Not meet any rules to check the workload available or not")
 }
@@ -160,7 +162,12 @@ func checkDeployment(kubeClient kubernetes.Interface, name string) error {
 		}
 
 		// Make sure the deployment is available.
-		if deployment.Status.Conditions[0].Type == appsv1.DeploymentAvailable {
+		/*
+			if deployment.Status.Conditions[0].Type == appsv1.DeploymentAvailable {
+				return nil
+			}
+		*/
+		if deployment.Status.AvailableReplicas == *(deployment.Spec.Replicas) {
 			return nil
 		}
 
