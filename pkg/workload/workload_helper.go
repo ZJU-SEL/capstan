@@ -25,7 +25,6 @@ import (
 
 	"github.com/ZJU-SEL/capstan/pkg/util"
 	"github.com/pkg/errors"
-	//	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apismetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -162,11 +161,6 @@ func checkDeployment(kubeClient kubernetes.Interface, name string) error {
 		}
 
 		// Make sure the deployment is available.
-		/*
-			if deployment.Status.Conditions[0].Type == appsv1.DeploymentAvailable {
-				return nil
-			}
-		*/
 		if deployment.Status.AvailableReplicas == *(deployment.Spec.Replicas) {
 			return nil
 		}

@@ -32,6 +32,7 @@ declare -A IPERF3=(["BandWidth"]="capstan_BandWidth")
 declare -A MYSQL=(["TPMC"]="capstan_TPMC")
 declare -A SPARK=(["total_runtime"]="capstan_total_runtime")
 declare -A KUBEFLOW=(["images_second"]="capstan_images_second")
+declare -A WORDPRESS=(["QPS"]="capstan_QPS")
 
 PROMQL=""
 
@@ -52,6 +53,9 @@ function GetPromQL(){
 		;;
 	"kubeflow")
 		PROMQL=${KUBEFLOW[$2]}
+		;;
+	"wordpress")
+		PROMQL=${WORDPRESS[$2]}
 		;;
 	*)
 		# TODO(ZeroMagic): address the non-existent workloads

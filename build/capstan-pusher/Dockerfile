@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 FROM golang AS build-env
 WORKDIR /go/src
 RUN go get github.com/ZJU-SEL/capstan/cmd/capstan-pusher
